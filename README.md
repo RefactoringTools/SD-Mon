@@ -57,7 +57,7 @@ all tracing files are downloaded in the master fylesystem (traces dir).
 
 Open a terminal and type:
 
-export PATH=$HOME/SD-Mon/bin/:$HOME/SD-Mon/test/bin/:$PATH
+> export PATH=$HOME/SD-Mon/bin/:$HOME/SD-Mon/test/bin/:$PATH
 cd $HOME/SD-Mon
 cd test/config
 rm test.config (if existing)
@@ -68,14 +68,14 @@ sdmon_start -v
 
 open a new terminal and attach to node1 erlang shell:
 
-export PATH=$HOME/SD-Mon/bin/:$HOME/SD-Mon/test/bin/:$PATH
+> export PATH=$HOME/SD-Mon/bin/:$HOME/SD-Mon/test/bin/:$PATH
 cd $HOME/SD-Mon
 to_nodes node1
 sdmon_test:run_orbit_on_five_nodes().
 
 back on the first terminal:
 
-application:stop(sdmon).
+> application:stop(sdmon).
 
 find tracing and statistics in $HOME/SD-Mon/traces.
 
@@ -97,7 +97,7 @@ and replace the string "md504" with the proper userid (see above).
 
 Now open a terminal and type:
 
-export PATH=$HOME/SD-Mon/bin/:$HOME/SD-Mon/test/bin/:$PATH
+> export PATH=$HOME/SD-Mon/bin/:$HOME/SD-Mon/test/bin/:$PATH
 cd $HOME/SD-Mon
 cd test/config
 rm test.config
@@ -108,14 +108,14 @@ sdmon_start -v
 
 open a new terminal and attach to node1 erlang shell:
 
-export PATH=$HOME/SD-Mon/bin/:$HOME/SD-Mon/test/bin/:$PATH
+> export PATH=$HOME/SD-Mon/bin/:$HOME/SD-Mon/test/bin/:$PATH
 cd $HOME/SD-Mon
 to_nodes node1
 sdmon_test:run_orbit_on_nine_nodes().
 
 back on the first terminal:
 
-application:stop(sdmon).
+> application:stop(sdmon).
 
 find tracing and statistics in $HOME/SD-Mon/traces.
 
