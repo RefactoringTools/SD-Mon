@@ -4,7 +4,7 @@ SD-MON -- SD Erlang Monitor
 Revision history
 ----------------
 Rev. A - 04/02/2015
-- First realease for D5.4 delivery
+- First realease for D5.4 delivery.
 
 
 Introduction 
