@@ -1,0 +1,114 @@
+% REMOTE HOSTS IP ADDRESSES
+% =========================
+{hosts, [
+% '127.0.1.1'		% localhost
+% include IP addresses here below
+% example: 
+%  '129.12.3.176'      % myrtle.kent.ac.uk
+%  '129.12.3.211'      %   dove.kent.ac.uk
+% ------- edit below ------
+
+%, '129.12.3.176'
+%, '129.12.3.211'
+%, '129.12.328.176'
+
+% --- DO NOT edit below ---
+]}.
+
+% USER ID FOR SSH REMOTE ACCESS
+% =============================
+{uid,
+% String, example: 
+% "md504"
+% ------- edit below ------
+
+"md504"
+
+% --- DO NOT edit below ---
+}.
+
+
+% ERLANG NODES TO BE STARTED PER HOST
+% ===================================
+{vms_num,
+% Integer, example: 
+% 4
+% ------- edit below ------
+
+4
+
+% --- DO NOT edit below ---
+}.
+
+% S-GROUPS CONFIGURATION
+% ===================================
+{s_groups, [
+% include s_groups here below
+% example: 
+% {group1, normal, ['node1@127.0.1.1', 'node2@127.0.1.1']},
+% {group2, hidden, ['node1@127.0.1.1', 'node1@129.12.3.176', node2@129.12.3.176']}
+% ------- edit below ------
+%{group2, normal, ['node2@127.0.1.1', 'node3@127.0.1.1']},
+
+{group1, normal, [node1, node2]},
+{group2, normal, [node1, node3, node4]}
+%{group3, normal, ['node1@129.12.3.211', 'node2@129.12.3.211']},
+%{bridge_group, normal, ['node1@127.0.1.1','node1@129.12.3.176', 'node1@129.12.3.211']}
+
+%{group2, normal, ['node1@127.0.1.1', 'node1@129.12.3.176', 'node2@129.12.3.176']}
+
+% --- DO NOT edit below ---
+]}.
+
+% GLOBAL GROUPS CONFIGURATION
+% ===================================
+{global_groups, [
+% include global_groups here below
+% example: 
+% {group4, normal, ['node1@127.0.1.1', 'node2@127.0.1.1']},
+% {group5, hidden, ['node1@127.0.1.1', 'node1@129.12.3.176', node2@129.12.3.176']}
+% ------- edit below ------
+
+% {ggroup4, normal, ['node1@127.0.1.1']}
+
+% --- DO NOT edit below ---
+]}.
+
+
+% TRACES ON GROUPS AND NODES    
+% =============================
+{traces, [
+% Tuple {DType, Name, Trace}  
+% DType = s_group | global_group | node
+% Name = <s_group Name> | <global_group Name> | <node Name>
+% Trace = {Type, Args}
+% Type = basic | exec. 
+% Example:
+% {s_group, group1, {basic, []}}
+% {node, 'node1@127.0.1.1', {basic, []}}
+%
+% NOTES: -Group trace configuration overrides Node trace configuration.
+%        -All nodes of a group are traced in the same way
+%        -Nodes belonging to more groups are configured according to the first defined group 
+%        -Traces must be specified for all groups defined above
+%        -Free nodes with no trace specification will be monitored but not traced until
+%         a trace_node command is issued.
+
+% ------- edit below ------
+
+%  {s_group, group1, {trace, [inter_node, garbage_collection, scheduler]}}
+  {s_group, group1, {trace, [inter_node]}}
+, {s_group, group2, {trace, [inter_node]}}
+, {node, node9, {trace, [inter_node]}}
+%, {s_group, group3, {basic, []}}
+%, {s_group, bridge_group, {basic, []}}
+
+ % {node, 'node1@127.0.1.1', {basic, []}}
+%, {node, 'node2@127.0.1.1', {basic, []}}
+%, {node, 'node2@129.12.3.176', {basic, [test]}}
+%, {node, 'node2@129.12.328.176', {basic, [wrong]}}
+%, {node, 'node4@129.12.328.176', {basic, [wrong]}}
+
+% --- DO NOT edit below ---
+]}.
+

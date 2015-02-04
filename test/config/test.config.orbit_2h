@@ -1,0 +1,104 @@
+% REMOTE HOSTS IP ADDRESSES
+% =========================
+{hosts, [
+  '129.12.3.211'		% localhost
+% include IP addresses here below
+% example: 
+%  '129.12.3.176'      % myrtle.kent.ac.uk
+%  '129.12.3.211'      %   dove.kent.ac.uk
+% ------- edit below ------
+
+, '129.12.3.176'
+%, '129.12.3.211'
+
+% --- DO NOT edit below ---
+]}.
+
+% USER ID FOR SSH REMOTE ACCESS
+% =============================
+{uid,
+% String, example: 
+% "md504"
+% ------- edit below ------
+
+"md504"
+
+% --- DO NOT edit below ---
+}.
+
+
+% ERLANG NODES TO BE STARTED PER HOST
+% ===================================
+{vms_num,
+% Integer, example: 
+% 4
+% ------- edit below ------
+
+3
+
+% --- DO NOT edit below ---
+}.
+
+% S-GROUPS CONFIGURATION
+% ===================================
+{s_groups, [
+% include s_groups here below
+% example: 
+% {group1, normal, ['node1@129.12.3.211', 'node2@129.12.3.211']},
+% {group2, hidden, ['node1@129.12.3.211', 'node1@129.12.3.176', node2@129.12.3.176']}
+% ------- edit below ------
+
+{group1, normal, ['node1@129.12.3.211', 'node2@129.12.3.211', 'node3@129.12.3.211']},
+{group2, normal, ['node1@129.12.3.176', 'node2@129.12.3.176', 'node3@129.12.3.176']},
+{bridge_group, normal, ['node1@129.12.3.211','node1@129.12.3.176']}
+
+
+% --- DO NOT edit below ---
+]}.
+
+% GLOBAL GROUPS CONFIGURATION
+% ===================================
+{global_groups, [
+% include global_groups here below
+% example: 
+% {group4, normal, ['node1@129.12.3.211', 'node2@129.12.3.211']},
+% {group5, hidden, ['node1@129.12.3.211', 'node1@129.12.3.176', node2@129.12.3.176']}
+% ------- edit below ------
+
+
+% --- DO NOT edit below ---
+]}.
+
+
+% TRACES ON GROUPS AND NODES    
+% =============================
+{traces, [
+%% Tuple {DType, Name, Trace}  
+% DType = s_group | global_group | node
+% Name = <s_group Name> | <global_group Name> | <node Name>
+% Trace = {Type, Args}
+% Type = basic | exec | trace
+% Args = [] for basic | {M,F,A} for exec | TraceOpions for trace
+% TraceOptions = system_profile | garbage_collection | scheduler | inter_node
+% Example:
+% {s_group, group1, {trace, [garbage_collection, inter_node]}}
+% {s_group, group2, {exec, [{erlang, trace_pattern,[{s_group,'_','_'},true,[global]]}]}}
+% {node, 'node1@129.12.3.211', {basic, []}}
+%
+% NOTES: -Group trace configuration overrides Node trace configuration.
+%        -All nodes of a group are traced in the same way
+%        -Nodes belonging to more groups are configured according to the first defined group 
+%        -Traces must be specified for all groups defined above
+%        -Free nodes with no trace specification will be monitored but not traced until
+%         a trace_node command is issued.
+
+% ------- edit below ------
+
+  {s_group, group1, {trace, [inter_node]}}
+, {s_group, group2, {trace, [inter_node, garbage_collection, scheduler]}}
+, {s_group, bridge_group, {trace, [inter_node, garbage_collection, scheduler]}}
+
+
+% --- DO NOT edit below ---
+]}.
+

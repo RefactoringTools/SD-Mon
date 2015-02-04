@@ -1,0 +1,18 @@
+#!/bin/bash -l
+#SBATCH -A p2012172
+#SBATCH -p node -N 0 -n 0
+#SBATCH -t 00:00:00 
+
+# Author: Maurizio Di Stefano
+
+# @RELEASE project (http://www.release-project.eu/)
+
+# USAGE: ./to_nodes <prefix>
+# attach to a local node using its name prefix
+
+echo NODE IS: $1
+
+erl -name to_$1@`hostname -i` -remsh $1@`hostname -i` -smp
+
+
+
