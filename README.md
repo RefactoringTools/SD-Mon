@@ -143,20 +143,4 @@ find tracing and statistics in $HOME/SD-Mon/traces.
 
 
 
-Future Development 
-------------------
-
-                 RATIONALE                     | Priority  | Effort
-----------------------------------------------------------------------
-- WEB runtime display                          |  ****     |   ****
-- more trace options (system profiles, ..)     |  ?        |   **
--SCALABILITY & non functional requirement      |           |
- -> submaster level                            |  ****     |   ****
- -> efficient data handling (eg. ets, or       |  ***      |   ***
-    key-value: dict (faster on read), gb_tree) |           |
--Wombat integration                            |   ???     |   ***
--deep test                                     |  *****    |   ****
--code and dirs cleanup + git storage           |  *****    |   **
-
-
 
