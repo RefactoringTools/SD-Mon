@@ -44,14 +44,14 @@ SD-Mon is started by executing from the base directory ($HOME/SD-Mon) the
 bash script:
 
 ```bash
-sdmon_start
+bin/sdmon_start
 ```
 
 configuration files are read and the shadow network is started.
 By executing:
 
 ```bash
-sdmon_stop
+bin/sdmon_stop
 ```
 
 SD-Mon is stopped: all tracing is removed, agents are terminated and
