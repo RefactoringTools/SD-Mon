@@ -137,17 +137,9 @@ sdmon_test:run_orbit_on_nine_nodes().
 
 back on the first terminal:
 
-<<<<<<< HEAD
-> application:stop(sdmon).
 
-find tracing and statistics in $HOME/SD-Mon/traces.
-
-
-
-=======
 ```bash
 application:stop(sdmon).
 ```
->>>>>>> 7c5b860f1d314db3003264f1bc552ef87ca5c738
 
 find tracing and statistics in `$HOME/SD-Mon/traces`.
