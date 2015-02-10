@@ -76,11 +76,6 @@ cd $HOME/SD-Mon
 cd test/config
 rm test.config  # if it exists
 ln -s test.config.orbit test.config
-```
-
-open 'test.config' and edit 'localhost' and 'uid' entries, then:
-
-```bash
 cd ../../
 run_env
 sdmon_start -v
