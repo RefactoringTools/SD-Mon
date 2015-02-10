@@ -7,10 +7,15 @@
 
 # @RELEASE project (http://www.release-project.eu/)
 
+if [ -f .localhost ]; 
+	then	LOCALHOST=`cat .localhost |awk -F \' '{print $2}'`
+	else 	LOCALHOST=`hostname -i`
+fi
+
 echo ""
 echo "================ START TIME: `date +'%T'` ==============="
 
-	erl -name sdmonrun@`hostname -i` -run run_env start -s init stop -pa ./ebin;
+	erl -name sdmonrun@$LOCALHOST -run run_env start -s init stop -pa ./ebin;
 
 echo ""
 echo "To attach type: ./test/bin/to_node [Node name]"

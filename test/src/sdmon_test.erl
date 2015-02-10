@@ -102,4 +102,9 @@ run() ->
 
 
 local(Prefix) ->
-    list_to_atom(atom_to_list(Prefix)++"@"++os:cmd("hostname -i")--"\n").
+    LOCALHOST = 
+	case file:consult(".localhost") of
+	{ok, [Localhost]} -> atom_to_list(Localhost);
+	_ -> os:cmd("hostname -i")--"\n"
+    end,
+    list_to_atom(atom_to_list(Prefix)++"@"++LOCALHOST).

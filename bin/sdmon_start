@@ -19,14 +19,17 @@ if [ -n "${Oldmon}" ]; then
 	kill -9 $Oldmon
 fi
 
-
+if [ -f .localhost ]; 
+	then	LOCALHOST=`cat .localhost |awk -F \' '{print $2}'`
+	else 	LOCALHOST=`hostname -i`
+fi
 
 if [ -n "${verbose}" ] && [ $verbose = "-v" ]; then
-	erl -hidden -name sdmon_master@`hostname -i` -config ./config/group.config -eval "application:start(sdmon)" -pa ./ebin
+	erl -hidden -name sdmon_master@$LOCALHOST -config ./config/group.config -eval "application:start(sdmon)" -pa ./ebin
 else 
-	erl -detached -hidden -name sdmon_master@`hostname -i` -config ./config/group.config -eval "application:start(sdmon)" -pa ./ebin
+	erl -detached -hidden -name sdmon_master@$LOCALHOST -config ./config/group.config -eval "application:start(sdmon)" -pa ./ebin
 
-	echo "Started  sdmon_master@`hostname -i`  with PID = `ps -axu|grep sdmon_master| grep beam| head -n 1 | awk '{print $2}'`"
+	echo "Started  sdmon_master@$LOCALHOST  with PID = `ps -axu|grep sdmon_master| grep beam| head -n 1 | awk '{print $2}'`"
 
 	echo "To attach type: ./bin/to_master"
 fi

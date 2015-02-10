@@ -10,7 +10,12 @@
 # USAGE: to_master
 # attach to the SD-Mon Master node
 
-erl -noshell -name stopper@`hostname -i` -eval "rpc:call('sdmon_master@`hostname -i`', application,stop,[sdmon])" -pa ./ebin -s init stop
+if [ -f .localhost ]; 
+	then	LOCALHOST=`cat .localhost |awk -F \' '{print $2}'`
+	else 	LOCALHOST=`hostname -i`
+fi
+
+erl -noshell -name stopper@$LOCALHOST -eval "rpc:call('sdmon_master@$LOCALHOST', application,stop,[sdmon])" -pa ./ebin -s init stop
 
 
 

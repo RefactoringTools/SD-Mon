@@ -434,7 +434,10 @@ domain_specific(quote, _Domain, _) ->
 
 
 get_localhost() ->
-    list_to_atom(os:cmd("hostname -i")--"\n").
+    case file:consult(".localhost") of
+	{ok, [Localhost]} -> Localhost;
+	_ -> list_to_atom(os:cmd("hostname -i")--"\n")
+    end.
 
 
 get_trace(Node, Traces) ->

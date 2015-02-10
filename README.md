@@ -6,6 +6,8 @@ Revision history
 Rev. A - 04/02/2015
 - First release for D5.4 delivery.
 
+Rev. B01 - 10/02/2015
+- Added Makefile and localhost IP configuration.
 
 Introduction 
 ------------
@@ -33,10 +35,17 @@ across the network by the master and they are made available in a
 readable format in the master file system and statistics are generated.
 
 Description
-------------
+-----------
 A detailed description can be found in document
 "SD-Mon Tool Description".
 
+Installation
+------------
+```bash
+git clone https://github.com/RefactoringTools/SD-Mon
+cd SD-Mon
+make
+```
 
 How to run SD-Mon
 -----------------

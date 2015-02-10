@@ -10,9 +10,14 @@
 # USAGE: ./to_nodes <prefix>
 # attach to a local node using its name prefix
 
+if [ -f .localhost ]; 
+	then	LOCALHOST=`cat .localhost |awk -F \' '{print $2}'`
+	else 	LOCALHOST=`hostname -i`
+fi
+
 echo NODE IS: $1
 
-erl -name to_$1@`hostname -i` -remsh $1@`hostname -i` -smp
+erl -name to_$1@$LOCALHOST -remsh $1@$LOCALHOST -smp
 
 
 

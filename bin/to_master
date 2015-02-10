@@ -10,7 +10,12 @@
 # USAGE: ./to_sdmon_master
 # attach to the SD-Mon Master node
 
-erl -name sdmon_master_shell@`hostname -i` -remsh sdmon_master@`hostname -i` -smp
+if [ -f .localhost ]; 
+	then	LOCALHOST=`cat .localhost |awk -F \' '{print $2}'`
+	else 	LOCALHOST=`hostname -i`
+fi
+
+erl -name sdmon_master_shell@$LOCALHOST -remsh sdmon_master@$LOCALHOST -smp
 
 
 

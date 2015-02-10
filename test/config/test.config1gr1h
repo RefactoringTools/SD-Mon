@@ -1,3 +1,19 @@
+% LOCAL HOST IP ADDRESS
+% =====================
+{localhost, [
+% localhost IP address.
+% Used to run sdmon_master and local agents.
+% If not provided, will be detected by means
+% the unix command: 'hostname -i'
+% example: 
+%  '127.0.0.1'      
+% ------- edit below ------
+
+% '127.0.0.1'
+
+% --- DO NOT edit below ---
+]}.
+
 % REMOTE HOSTS IP ADDRESSES
 % =========================
 {hosts, [
@@ -50,7 +66,7 @@
 % ------- edit below ------
 %{group2, normal, ['node2@127.0.1.1', 'node3@127.0.1.1']},
 
-{group1, normal, ['node1@127.0.1.1', 'node2@127.0.1.1']}
+{group1, normal, [node1, node2]}
 %{group2, normal, ['node1@129.12.3.176', 'node2@129.12.3.176']},
 %{group3, normal, ['node1@129.12.3.211', 'node2@129.12.3.211']},
 %{bridge_group, normal, ['node1@127.0.1.1','node1@129.12.3.176', 'node1@129.12.3.211']}

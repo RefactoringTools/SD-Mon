@@ -1,3 +1,18 @@
+% LOCAL HOST IP ADDRESS
+% =====================
+{localhost, [
+% localhost IP address.
+% Used to run sdmon_master and local agents.
+% If not provided, will be detected by means
+% the unix command: 'hostname -i'
+% example: 
+%  '127.0.0.1'      
+% ------- edit below ------
+
+
+% --- DO NOT edit below ---
+]}.
+
 % REMOTE HOSTS IP ADDRESSES
 % =========================
 {hosts, [

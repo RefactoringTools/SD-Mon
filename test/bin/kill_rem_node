@@ -7,14 +7,18 @@
 
 # @RELEASE project (http://www.release-project.eu/)
 
-# USAGE: ./kill_rem_node <Node Name, Host IP>
+# USAGE: ./kill_rem_node <Node Name> <Host IP>
 
+if [ -f .uid ]; 
+	then	UserID=`cat .uid |awk -F \" '{print $2}'`;
+	else 	UserID=whoami
+fi
 
-PID=`ssh -q -l md504 $2 ps -axu|grep $1| grep beam| head -n 1 | awk '{print $2}'`;
+PID=`ssh -q -l $UserID $2 ps -axu|grep $1| grep beam| head -n 1 | awk '{print $2}'`;
 
 if [ -n "${PID}" ]; then
 	echo "Killing $1@$2 with PID = $PID"
-	ssh -q -l md504 $2 kill -9 $PID
+	ssh -q -l $UserID $2 kill -9 $PID
 else
 	echo "$1@$2 not alive";
 fi

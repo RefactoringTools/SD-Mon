@@ -98,7 +98,6 @@ sync(State) ->
 %% @spec env_node() -> {env_nodes, Nodes} | timeout | {badrpc, Reason} 
 %% @end
 %%--------------------------------------------------------------------
-%y
 
 env_nodes() ->               % for local test only (called from sdmon shell)
     env_nodes(node()).       % also called by sdmon_trace
@@ -115,7 +114,7 @@ env_nodes(SDMON) ->
 %% @spec get_state(SDMON_Node) -> #state{} | timeout | {badrpc, Reason} 
 %% @end
 %%--------------------------------------------------------------------
-%y
+
 get_state() ->               % for local test only (called from sdmon shell)
     get_state(node()).
 
@@ -528,10 +527,6 @@ trace(Node, stop, _, State) ->
     end.
 
 
-sd_mon_NODE() ->
-    {ok,Host} = inet:gethostname(),
-    list_to_atom("sdmon@"++Host).
- 
 
 terminate(_VMs) ->
     sdmon_trace:stop_all().
@@ -539,14 +534,13 @@ terminate(_VMs) ->
 %%%===================================================================
 %%% Internal state handling
 %%%===================================================================
-%y
+
 build_state({MasterNode, Type, GName, Trace, Nodes, Token, Groups})  ->
     #state{master=MasterNode, type=Type, gname=GName, trace=Trace, groups=Groups,
 	   nodes=build_nodes(Trace, Nodes, Groups, []), token=Token};
 build_state(MasterNode) ->
     #state{master=MasterNode}.
 
-%y
 build_nodes( _, [], _,  Recs) ->
     Recs;
 build_nodes(Trace, [Node | Nodes], Groups, Recs) ->
@@ -577,10 +571,9 @@ build_nodes(Trace, [Node | Nodes], Groups, Recs) ->
     end.
 
 
-%y
 get_nodes(State) ->
     [VMrec#vmrec.node || VMrec <- State#state.nodes].
-%y    
+    
 get_node_rec(Node, State) ->
     case lists:keyfind(Node, #vmrec.node, State#state.nodes) of
 	false ->
@@ -588,7 +581,6 @@ get_node_rec(Node, State) ->
 	VMrec ->
 	    VMrec
     end.
-%y
 add_node(Node, ConnState, State) ->
     case lists:keyfind(Node, #vmrec.node, State#state.nodes) of
 	false ->
@@ -599,12 +591,11 @@ add_node(Node, ConnState, State) ->
 					      State#state.nodes, 
 					      Oldrec#vmrec{state=ConnState})}
     end.
-%y
+
 rem_node(Node, State) ->
     State#state{nodes=lists:keydelete(Node, #vmrec.node, State#state.nodes)}.
 
 %non serve: non affidabile, last known state
-%y
 get_conn_state(#vmrec{state=ConnState}) ->
     ConnState.
 get_conn_state(Node, State) ->
@@ -614,7 +605,7 @@ get_conn_state(Node, State) ->
 	Oldrec ->
 	   Oldrec#vmrec.state
     end.	
-%y
+
 change_conn_state(Node, ConnState, State) ->
     case lists:keyfind(Node, #vmrec.node, State#state.nodes) of
 	false ->
@@ -643,7 +634,7 @@ update_trace(Trace, State) ->
 
 update_token(Token, State) ->
     State#state{token=Token}.
-%y
+
 update_status(VMrec=#vmrec{node=Node}, State) ->
     case lists:keyfind(Node, #vmrec.node, State#state.nodes) of
 	false ->
@@ -652,7 +643,7 @@ update_status(VMrec=#vmrec{node=Node}, State) ->
 	    State#state{nodes=lists:keyreplace(Node, #vmrec.node, 
 					       State#state.nodes, VMrec)}
     end.
-%y
+
 update_status(Node, NewStatusTuples, State) ->
     case get_node_rec(Node, State) of
 	no_node ->
@@ -697,7 +688,6 @@ rem_worker(Node, State) ->
 					       Oldrec#vmrec{worker=undefined})}
     end.	
 
-%y
 get_worker(#vmrec{worker=Worker})->
     Worker.
 
@@ -753,7 +743,7 @@ handle_worker_dead(Pid, Reason, State) ->    % best effort, fails if node down
 		    end
 	    end
     end.
-%y	  
+
 handle_node_up(Node, State) ->
     case get_node_rec(Node, State) of
 	no_node ->           % Notification from a not monitored node !!
@@ -774,7 +764,7 @@ handle_node_up(Node, State) ->
 		    update_status(VMrec#vmrec{state=down, dmon=DMon}, State)
 	    end
     end.
-%y
+
 handle_node_down(Node, State) ->
     case get_node_rec(Node, State) of
 	no_node ->           % Notification from a not monitored node !!
@@ -807,7 +797,6 @@ stop_direct_monitoring(_) ->
 		  
 %%% Makes a log printout every Logtreshold cycles (e.g. every 60 secs)
 %%% until the node is up (eg: restarted) or it is demonitored.
-%y
 direct_monitor(SdmonPid, Node, N, LogTreshold) ->
     case net_adm:ping(Node) of
 	pong ->
@@ -831,7 +820,7 @@ direct_monitor(SdmonPid, Node, N, LogTreshold) ->
 %%%===================================================================
 %%%  Workers functions
 %%%===================================================================
-%y
+
 % called by handle_node_up/down 
 start_worker_if_needed(#vmrec{node=Node, worker=PID}, Trace) ->
     case {PID, Trace} of 

@@ -221,7 +221,14 @@ loop(Trace) ->
 %%%===================================================================
 
 get_hosts(Configs) ->
-   {ok, element(2, lists:keyfind(hosts, 1, Configs))}.
+    LocalHost =
+	case lists:keyfind(localhost, 1, Configs) of
+	    {localhost, []} -> 	get_localhost();
+	    {localhost, [LocalH]} -> LocalH 
+	end,
+    put(localhost, LocalHost),
+    store_localhost(LocalHost),
+    {ok, element(2, lists:keyfind(hosts, 1, Configs))}.
 
 get_sgroups(Configs) ->
    {ok, ck_group_nodes(element(2, lists:keyfind(s_groups, 1, Configs)))}.
@@ -241,6 +248,11 @@ get_uid(Configs) ->
 store_uid(UID) ->
     {ok, Dev} = file:open(".uid",write),
     io:format(Dev,"~p.",[UID]),
+    file:close(Dev).
+
+store_localhost(Localhost) ->
+    {ok, Dev} = file:open(".localhost",write),
+    io:format(Dev,"~p.",[Localhost]),
     file:close(Dev).
 
 
@@ -287,7 +299,12 @@ nodup([H|T], NewL) ->
     end.
 
 get_localhost() ->
-    list_to_atom(os:cmd("hostname -i")--"\n").
+    case get(localhost) of
+	undefined ->
+	    list_to_atom(os:cmd("hostname -i")--"\n");
+	LocalHost ->
+	    LocalHost
+    end.
 
 add_local_ip(NodeName) ->
     NodeStr = atom_to_list(NodeName),
@@ -295,7 +312,7 @@ add_local_ip(NodeName) ->
 	true ->
 	    NodeName;
 	_ ->
-	    list_to_atom(NodeStr++"@"++os:cmd("hostname -i")--"\n")
+	    list_to_atom(NodeStr++"@"++atom_to_list(get_localhost()))
     end.
 
 ck_VMNames(VMs) ->
@@ -328,7 +345,7 @@ upload_group_config(UID, [Host|T]) ->
 
 
 add_localhost(Hosts) ->
-     LOCALHOST = get_localhost(),
+    LOCALHOST = get_localhost(),
     case lists:member(LOCALHOST, Hosts) of
 	true ->
 	    Hosts;
