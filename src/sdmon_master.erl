@@ -21,7 +21,7 @@
 -export([agents/1, stop_agent/2, stop_agents/1]).
 
 %% Agent Interface
--export([init_conf/1, s_group_change/3]).
+-export([init_conf/2, s_group_change/3]).
 
 %% Test Interface
 -export([get_state/0, get_state/1]).
@@ -32,14 +32,13 @@
 -define(timeout, 5000).                 % for local calls
 -define(timeoutext, 3000).              % for remote calls
 
--define(BASEDIR, "'$HOME'/SD-Mon").
 -define(TRACE_CONFIG, "./config/trace.config").   
 -define(GROUP_CONFIG, "./config/group.config").
 
 -define(LOGDIR, "./logs/").
 -define(LOGFILE, "./logs/sdmon_master.log").
 
--record(agent, {vm, sdmon, type, gname, nodes=[], trace=notrace, state=down,
+-record(agent, {vm, dir, sdmon, type, gname, nodes=[], trace=notrace, state=down,
 		dmon=no, token}).
 
 -compile([debug_info, export_all]).
@@ -104,9 +103,9 @@ agents(Master) ->
 %% @end
 %%--------------------------------------------------------------------
 
-init_conf(Master) -> init_conf(Master, node()).
-init_conf(Master, SDMon) ->
-    gen_server:call({sdmon_master, Master}, {init_conf, SDMon}, infinity).
+init_conf(Master, Dir) -> init_conf(Master, node(), Dir).
+init_conf(Master, SDMon, Dir) ->
+    gen_server:call({sdmon_master, Master}, {init_conf, SDMon, Dir}, infinity).
 
 s_group_change(Master, Fun, Args) ->
     gen_server:cast({sdmon_master, Master}, {node(), s_group_change, Fun, Args}).
@@ -159,7 +158,7 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({init_conf, SDMON}, {From, _Tag}, State) ->
+handle_call({init_conf, SDMON, Dir}, {From, _Tag}, State) ->
   case  get_sdmon_config(SDMON, State) of
       {error, Reason} ->
 	  log("Received config request from unknown agent ~p~n",[SDMON]),
@@ -172,7 +171,8 @@ handle_call({init_conf, SDMON}, {From, _Tag}, State) ->
 	  Groups = groups(State),
 	  {reply, {ok, {Type,  GName, Trace, Nodes, Token, Groups}}, 
 	         update_agent(get_agent(SDMON, State), 
-			      [{sdmon,From}, {state,up}, {token,Token}], State)}
+			      [{sdmon,From}, {dir,Dir}, {state,up}, {token,Token}], 
+			      State)}
   end;
 
 handle_call(get_state, {_From, _Tag}, State) ->
@@ -267,18 +267,18 @@ handle_info(Info, State) ->
 %%--------------------------------------------------------------------
 terminate(_Reason, State) ->
     log("TERMINATE CALLED~n",[]),
-    TimeStamp = timestamp(),                    %MAU
-    lists:foreach(fun(Agent) -> do_stop_agent(Agent, TimeStamp) end, State), %MAU
+    TimeStamp = timestamp(),                    
+    lists:foreach(fun(Agent) -> do_stop_agent(Agent, TimeStamp) end, State), 
     init:stop(),
     ok.
 
-do_stop_agent(Agent) ->                  %MAU
-    do_stop_agent(Agent, timestamp()).                  %MAU
-do_stop_agent(Agent, TimeStamp) ->                  %MAU
-    [SDMON, Nodes] = get_agent_vals(Agent, [vm,nodes]),
+do_stop_agent(Agent) ->                  
+    do_stop_agent(Agent, timestamp()).                  
+do_stop_agent(Agent, TimeStamp) ->                  
+    [SDMON, Dir, Nodes] = get_agent_vals(Agent, [vm,dir,nodes]),
     unlink(get_agent_val(Agent, sdmon)),
     erlang:monitor_node(SDMON, false),
-    stop_sdmon(SDMON, Nodes, TimeStamp, sync),                   %MAU
+    stop_sdmon(SDMON, Dir, Nodes, TimeStamp, sync),                   
     io:format("Agent ~p: stopped~n~n",[SDMON]),
     log("Agent ~p: stopped~n",[SDMON]).
 
@@ -345,7 +345,6 @@ start_agents([Host|Hosts], Traces, Agents) ->
 
 start_agent({Prefix, Domain, Type, Nodes}, Traces) ->
     SSH = domain_specific(ssh, Domain),
-    EBIN = domain_specific(ebin, Domain),
     NodeStr = atom_to_list(Prefix) ++ "@" ++ atom_to_list(Domain),
     VMstr = "sdmon_" ++ NodeStr,
     VM = list_to_atom(VMstr),
@@ -362,7 +361,7 @@ start_agent({Prefix, Domain, Type, Nodes}, Traces) ->
 	++ " -setcookie " ++ atom_to_list(erlang:get_cookie())
 	++ " -run sdmon start " 
 	++ atom_to_list(node())
-	++ " -s init stop -pa " ++ EBIN,
+	++ " -s init stop",
 %	++ " >" ++ ?LOGDIR++VMstr++".log",
     os:cmd(CMD),
 %    log("CMD is: ~p~n",[CMD]),
@@ -381,14 +380,13 @@ start_agent({Prefix, Domain, Type, Nodes}, Traces) ->
 
 restart_agent(VM) ->
     SSH = domain_specific(ssh, domain(VM)),
-    EBIN = domain_specific(ebin, domain(VM)),
     VMstr = atom_to_list(VM),
     kill_VM(SSH, VMstr), 
     CMD = SSH ++ "erl -hidden -detached -name " ++ VMstr
 	++ " -setcookie " ++ atom_to_list(erlang:get_cookie())
 	++ " -run sdmon start " 
 	++ atom_to_list(node())
-	++ " -s init stop -pa " ++ EBIN,
+	++ " -s init stop",
 %	++ " >" ++ ?LOGDIR++VMstr++".log",
     os:cmd(CMD),
 %    log("CMD is: ~p~n",[CMD]),
@@ -415,16 +413,6 @@ domain_specific(ssh, Domain, _) ->
 	UID ->
 	    "ssh -q -l " ++ UID ++" " ++ atom_to_list(Domain) ++ " "
     end;    
-
-domain_specific(basedir, LOCALHOST, LOCALHOST) ->
-    ".";
-domain_specific(basedir, _Domain, _) ->
-    ?BASEDIR;
-
-domain_specific(ebin, LOCALHOST, LOCALHOST) ->
-    "./ebin";
-domain_specific(ebin, _Domain, _) ->
-    ?BASEDIR++"/ebin";
 
 domain_specific(quote, LOCALHOST, LOCALHOST) ->
     "";
@@ -580,13 +568,13 @@ handle_s_group_change(SDMON, Fun=new_s_group, Args=[SGroup, Nodes], State) ->
 	    Trace = new_grp_trace(ExFreeNodesAgents, get_agent(SDMON,State)),    
 	   % start a new agent with that node to trace with same traces of SDMON
 	    Traces = [{s_group, SGroup, Trace}],
-	    TimeStamp = timestamp(),   %MAU
+	    TimeStamp = timestamp(),   
 	    DeleteAgentF = 
 		fun(Agent, LoopState) ->
-			[SDMONPid,SDMONNode,ExNodes] = 
-			    get_agent_vals(Agent, [sdmon,vm,nodes]),
+			[SDMONPid,SDMONNode,Dir,ExNodes] = 
+			    get_agent_vals(Agent, [sdmon,vm,dir,nodes]),
 			unlink(SDMONPid),
-			stop_sdmon(SDMONNode, ExNodes, TimeStamp),   %MAU
+			stop_sdmon(SDMONNode, Dir, ExNodes, TimeStamp),   
 			_NewState = remove_agent(Agent#agent.vm, LoopState)
 		end,
 	    NewState = lists:foldl(DeleteAgentF, State, ExFreeNodesAgents),
@@ -611,11 +599,11 @@ handle_s_group_change(_FROM, Fun=delete_s_group, Args=[SGroup], State) ->
 	     State;
 	 Agent ->
 	     FreeNodes = get_new_free_nodes(Agent, State),   % to be started
-	     [SDMONPid,SDMONNode,Trace,Nodes] = 
-		 get_agent_vals(Agent, [sdmon,vm,trace,nodes]),
+	     [SDMONPid,SDMONNode,Dir,Trace,Nodes] = 
+		 get_agent_vals(Agent, [sdmon,vm,dir,trace,nodes]),
 	     NotFreeNodes = Nodes -- FreeNodes,
 	     unlink(SDMONPid),
-	     stop_sdmon(SDMONNode, Nodes),
+	     stop_sdmon(SDMONNode, Dir, Nodes),
 	     NewState =  remove_agent(Agent#agent.vm, State),  
 	     FinalState =
 	     lists:foldl(
@@ -639,13 +627,13 @@ handle_s_group_change(_FROM, Fun=add_nodes, Args=[SGROUP, Nodes], State) ->
 	Agent ->
             % if a node was free, delete free agent 
 	    ExFreeNodesAgents = free_nodes_agents(Nodes, State), % to be stopped
-	    TimeStamp = timestamp(),   %MAU
+	    TimeStamp = timestamp(),   
 	    DeleteAgentF = 
 		fun(Ag, LoopState) ->
-			[SDMONPid,SDMONNode,ExNodes] = 
-			    get_agent_vals(Ag, [sdmon,vm,nodes]),
+			[SDMONPid,SDMONNode,Dir,ExNodes] = 
+			    get_agent_vals(Ag, [sdmon,vm,dir,nodes]),
 			unlink(SDMONPid),
-			stop_sdmon(SDMONNode, ExNodes, TimeStamp),  %MAU
+			stop_sdmon(SDMONNode, Dir, ExNodes, TimeStamp),  
 			_NewState = remove_agent(Ag#agent.vm, LoopState)
 		end,
 	    NewState = lists:foldl(DeleteAgentF, State, ExFreeNodesAgents),
@@ -829,7 +817,8 @@ direct_monitor(MasterPid, VM, N, LogTreshold) ->
 %%%===================================================================
 %%% Internal state handling
 %%%===================================================================
-% record(agent, {vm, type, nodes=[], trace=notrace, state=down, dmon=no})
+% record(agent, {vm, dir, sdmon, type, gname, nodes=[], trace=notrace, state=down,
+%		 dmon=no, token}).
 
 groups(State) ->
     [{Agent#agent.gname, Agent#agent.nodes} || 
@@ -864,6 +853,8 @@ get_agent_from_group(Pid, State) ->
 
 get_agent_val(Agent, vm) ->        % not used (vm is key)
     Agent#agent.vm;
+get_agent_val(Agent, dir) ->
+    Agent#agent.dir;
 get_agent_val(Agent, sdmon) ->
     Agent#agent.sdmon;
 get_agent_val(Agent, type) ->
@@ -886,6 +877,8 @@ get_agent_vals(Agent, Vals) -> [get_agent_val(Agent, Val) || Val <- Vals].
 
 set_agent_val(Agent, {vm, Val}) ->    % not used (vm is key)
     Agent#agent{vm=Val};
+set_agent_val(Agent, {dir, Val}) ->
+    Agent#agent{dir=Val};
 set_agent_val(Agent, {sdmon, Val}) ->
     Agent#agent{sdmon=Val};
 set_agent_val(Agent, {type, Val}) ->
@@ -1006,17 +999,16 @@ save_initial_conf() ->
     end.
 
 				 
-stop_sdmon(SDMON, Nodes) ->                   %MAU
-    stop_sdmon(SDMON, Nodes, timestamp(), async).
-stop_sdmon(SDMON, Nodes, TimeStamp) ->
-    stop_sdmon(SDMON, Nodes, TimeStamp, async).
-stop_sdmon(SDMON, _Nodes, TimeStamp, SYNC) ->
+stop_sdmon(SDMON, Dir, Nodes) ->                   
+    stop_sdmon(SDMON, Dir, Nodes, timestamp(), async).
+stop_sdmon(SDMON, Dir, Nodes, TimeStamp) ->
+    stop_sdmon(SDMON, Dir, Nodes, TimeStamp, async).
+stop_sdmon(SDMON, BaseDir, _Nodes, TimeStamp, SYNC) ->
     sdmon:stop(SDMON),
-    get_trace_files(SDMON, TimeStamp),
+    get_trace_files(SDMON, BaseDir, TimeStamp),
     Host = domain(SDMON),
     SSH = domain_specific(ssh, Host),
-    BaseDir = domain_specific(basedir, Host),
-    Dir = BaseDir ++ "/traces/"++atom_to_list(SDMON),
+    Dir = BaseDir ++ "/SD-Mon/traces/"++atom_to_list(SDMON),
     os:cmd(SSH++"rm -rf "++Dir),
     case SYNC of
 	async ->
@@ -1026,7 +1018,7 @@ stop_sdmon(SDMON, _Nodes, TimeStamp, SYNC) ->
     end.
 
 
-get_trace_files(SDMONNode, Postfix) ->       %MAU
+get_trace_files(SDMONNode, BaseDir, Postfix) ->       
     io:format("Getting trace files from Agent ~p ...~n",[SDMONNode]),
     NodeStr = atom_to_list(SDMONNode),
     Dir = "traces/"++NodeStr,
@@ -1036,13 +1028,12 @@ get_trace_files(SDMONNode, Postfix) ->       %MAU
 	true ->
 	   os:cmd("mv " ++Dir++" "++DestDir);
 	_ ->
-	    BaseDir = ?BASEDIR++"/",
 	    case get_uid() of
 		"" -> UID="";
 		String -> UID = String++"@"
 	    end,
 	    CMD = "scp -r -C "++UID++atom_to_list(domain(SDMONNode))++
-		":"++BaseDir++Dir++" "++DestDir,
+		":"++BaseDir++"/SD-Mon/"++Dir++" "++DestDir,
 %	    log("SCP CMD: ~p~n",[CMD]),
 	    os:cmd(CMD)
     end.

@@ -195,8 +195,7 @@ stop(Node, {exec, _Args}, VMrec) ->
 	    end
     end;
 
-%% stop(Node, {Type, _Args}, _VMrec) ->
-%%     case options(Type) of
+
 stop(Node, {trace, Args}, _VMrec) ->
     case ckoptions(Args) of
 	[] ->
@@ -317,13 +316,11 @@ trace_parser({trace_ts, From, send, Msg, To, _TS},
     {Node, Receiver, FilePort, Groups};
 
 % scheduler (running option)
-%% trace_parser(Trace={trace, Pid, in, Rq, _MFA}, 
 trace_parser(Trace={trace, _Pid, in, _Rq, _MFA}, 
 	     {Node, Receiver, FilePort, Groups}) ->
     to_file(FilePort, Trace),
     {Node, Receiver, FilePort, Groups};
 
-%& trace_parser(Trace={trace_ts, Pid, in, Rq, _MFA, _TS}, 
 trace_parser(Trace={trace_ts, _Pid, in, _Rq, _MFA, _TS}, 
 	     {Node, Receiver,FilePort, Groups}) ->
     to_file(FilePort, Trace),
@@ -408,8 +405,7 @@ group_nodes(Node, _GType) ->
 open_trace_file(Node) ->
     case get_file_port(Node) of 
 	undefined ->
-	    {ok,[[Home]]} = init:get_argument(home),
-	    Dir = Home++"/SD-Mon/traces/"++atom_to_list(node()),
+	    Dir = sdmon:basedir()++"/SD-Mon/traces/"++atom_to_list(node()),
 	    Prefix = Dir++"/"++atom_to_list(node())++"_traces_",
 	    Postfix = "_"++atom_to_list(Node),
 	    os:cmd("rm "++Prefix++"*"++Postfix),
@@ -446,8 +442,7 @@ decode_traces(Dir=[$/|_]) ->          % absolute path from user
     io:format("Statistics available in directory ~p~n",[Dir]);
 
 decode_traces(TraceDir) ->             % traces directory, called from master
-    {ok,[[Home]]} = init:get_argument(home),
-    decode_traces(Home++"/SD-Mon/traces/"++TraceDir++"/").
+    decode_traces(sdmon:basedir()++"/SD-Mon/traces/"++TraceDir++"/").
  
 
 decode_agent(Dir) ->
@@ -505,9 +500,8 @@ analyze(Dir) ->
 				 end 
 			    end, []))),
     AgStats = [Stats || {ok, Stats} <- [file:consult(File) || File <- STATFILES]],
-    {ok,[[Home]]} = init:get_argument(home),
     {ok,[[{_,[{s_groups, SGroups}, {global_groups, GGroup}]}]]} = 
-	file:consult(Home++"/SD-Mon/config/group.config"),
+	file:consult(sdmon:basedir()++"/SD-Mon/config/group.config"),
     Groups = [{G, Nds} || {G,_,Nds} <- SGroups++GGroup],
     SYSSTATS = aggregate(AgStats),
     SumData = get_sum_data(SYSSTATS, Groups),
@@ -650,7 +644,7 @@ merge([{nodes, NS1}|Rest1], [{nodes, NS2}|Rest2], Acc) ->
 merge([{groups, GS1}|Rest1], [{groups, GS2}|Rest2], Acc) ->
     merge(Rest1, Rest2, Acc++[{groups, merge_nodes(GS1++GS2)}]).
 
-% {From, Tos] == {From, [{To, Sz, Num} |...]}
+% {From, Tos} == {From, [{To, Sz, Num} |...]}
 merge_nodes(N) ->
     merge_nodes(N, []).
 merge_nodes([], MergedNodes) ->

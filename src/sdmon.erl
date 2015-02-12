@@ -20,7 +20,7 @@
 -export([start_trace/3, stop_trace/2, trace_status/2]).
 
 %% For internal use
--export([direct_monitor/4]).
+-export([direct_monitor/4, basedir/0]).
 
 -define(timeout, 5000).                 % for local calls
 -define(timeoutext, 3000).              % for remote calls
@@ -66,7 +66,7 @@ start([MasterNodeStr]) ->
 
 
 get_config_from_master(MasterNode) ->
-    case  catch sdmon_master:init_conf(MasterNode) of
+    case  catch sdmon_master:init_conf(MasterNode, basedir()) of
     	{ok, {Type, GName, Trace, Nodes, Token, Groups}} ->
 	    {Type, GName, Trace, Nodes, Token, Groups};
 	_ ->                            % {'EXIT',{{nodedown,... can occur
@@ -856,15 +856,13 @@ start_worker(Node, Trace) ->
 %%%===================================================================
 init_log() ->
     NodeName = atom_to_list(node()),
-    {ok,[[HOME]]} = init:get_argument(home),
-    LOGFILE = HOME ++ ?LOGDIR++NodeName++".log",
+    LOGFILE = basedir() ++ ?LOGDIR++NodeName++".log",
     os:cmd("mv " ++ LOGFILE ++ " " ++ LOGFILE++".old"),
     log("#-SDMON ~p-#  Started~n",[NodeName]).
 
 log(String, Args) ->  
     NodeName = atom_to_list(node()),
-    {ok,[[HOME]]} = init:get_argument(home),
-    LOGFILE = HOME ++ ?LOGDIR++NodeName++".log",
+    LOGFILE = basedir() ++ ?LOGDIR++NodeName++".log",
     {ok, Dev} = file:open(LOGFILE, [append]),
     io:format(Dev, "~p~p: "++String,[date(),time()|Args]),
     file:close(Dev).
@@ -902,3 +900,9 @@ list_to_term(String) ->
         {error, Error} ->
             Error
     end.
+
+%% Return the SD-Mon base directory, ex: "/home/mau"
+basedir() ->
+    [{_,[{_,EbinDir}]}|_] = module_info(compile),
+    lists:sublist(EbinDir, length(EbinDir)-length("/SD-Mon/ebin")).
+ 

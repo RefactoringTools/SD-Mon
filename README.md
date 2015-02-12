@@ -9,6 +9,9 @@ Rev. A - 04/02/2015
 Rev. B01 - 10/02/2015
 - Added Makefile and localhost IP configuration.
 
+Rev. B02 - 12/02/2015
+- Free installation directory.
+
 Introduction 
 ------------
 SD-Mon is a tool aimed to monitor SD-Erlang systems.
@@ -49,8 +52,10 @@ make
 
 How to run SD-Mon
 -----------------
-SD-Mon is started by executing from the base directory ($HOME/SD-Mon) the
-bash script:
+In the following we call "base directory" (or BASEDIR) the directory
+where the tool is installed, for instance `BASEDIR = /data/proj`.
+SD-Mon is started by executing from the installation directory 
+(`BASEDIR/SD-Mon`) the bash script:
 
 ```bash
 bin/sdmon_start
@@ -68,11 +73,12 @@ all tracing files are downloaded in the master fylesystem (traces dir).
 
 ### Example 1: SD-ORBIT on single-host
 
-Open a terminal and type:
+Open a terminal and type 
+(after replacing `<BASEDIR>` with the actual base directory):
 
 ```bash
-export PATH=$HOME/SD-Mon/bin/:$HOME/SD-Mon/test/bin/:$PATH
-cd $HOME/SD-Mon
+export PATH=<BASEDIR>/SD-Mon/bin/:<BASEDIR>/SD-Mon/test/bin/:$PATH
+cd <BASEDIR>/SD-Mon
 cd test/config
 rm test.config  # if it exists
 ln -s test.config.orbit test.config
@@ -84,8 +90,8 @@ sdmon_start -v
 open a new terminal and attach to node1 erlang shell:
 
 ```bash
-export PATH=$HOME/SD-Mon/bin/:$HOME/SD-Mon/test/bin/:$PATH
-cd $HOME/SD-Mon
+export PATH=<BASEDIR>/SD-Mon/bin/:<BASEDIR>/SD-Mon/test/bin/:$PATH
+cd <BASEDIR>/SD-Mon
 to_nodes node1
 sdmon_test:run_orbit_on_five_nodes().
 ```
@@ -96,7 +102,7 @@ back on the first terminal:
 application:stop(sdmon).
 ```
 
-find tracing and statistics in $HOME/SD-Mon/traces.
+find tracing and statistics in `<BASEDIR>/SD-Mon/traces`.
 
 ### Example 2: SD-ORBIT on multi-host
 
@@ -110,14 +116,14 @@ Some prerequisites apply in the multi-host case:
   userid granted to access remote nodes via SSH without password must be defined
   in test.config file (‘uid’ tag).
 
-Edit the file `$HOME/SD-Mon/test/config/test.config.orbit_3h` 
+Edit the file `<BASEDIR>/SD-Mon/test/config/test.config.orbit_3h` 
 and replace the string "md504" with the proper userid (see above).
 
 Now open a terminal and type:
 
 ```bash
-export PATH=$HOME/SD-Mon/bin/:$HOME/SD-Mon/test/bin/:$PATH
-cd $HOME/SD-Mon
+export PATH=<BASEDIR>/SD-Mon/bin/:<BASEDIR>/SD-Mon/test/bin/:$PATH
+cd <BASEDIR>/SD-Mon
 cd test/config
 rm test.config
 ln -s test.config.orbit_3h test.config
@@ -129,8 +135,8 @@ sdmon_start -v
 open a new terminal and attach to node1 erlang shell:
 
 ```bash
-export PATH=$HOME/SD-Mon/bin/:$HOME/SD-Mon/test/bin/:$PATH
-cd $HOME/SD-Mon
+export PATH=<BASEDIR>/SD-Mon/bin/:<BASEDIR>/SD-Mon/test/bin/:$PATH
+cd <BASEDIR>/SD-Mon
 to_nodes node1
 sdmon_test:run_orbit_on_nine_nodes().
 ```
@@ -142,4 +148,4 @@ back on the first terminal:
 application:stop(sdmon).
 ```
 
-find tracing and statistics in `$HOME/SD-Mon/traces`.
+find tracing and statistics in `<BASEDIR>/SD-Mon/traces`.

@@ -9,10 +9,6 @@ test_nodes(5) ->
 test_nodes(6) ->
     [local(node1),    local(node2),   local(node3),
      'node1@129.12.3.176', 'node2@129.12.3.176', 'node3@129.12.3.176'];  % myrtle
-%% test_nodes(9) ->
-%%     [local(node1),    local(node2),   local(node3),
-%%      'node1@129.12.3.176', 'node2@129.12.3.176', 'node3@129.12.3.176',   % myrtle
-%%      'node1@129.12.3.211', 'node2@129.12.3.211', 'node3@129.12.3.211'];  % dove
 test_nodes(9) ->
     [local(node1),
      'node1@129.12.3.176', 'node2@129.12.3.176', 'node3@129.12.3.176',   % myrtle
@@ -32,7 +28,7 @@ run_orbit_on_one_node() ->
    
 run_orbit_on_five_nodes() ->
     Nodes = test_nodes(5),
-    bench:dist_seq(fun bench:g124/1, 100000, 8,Nodes).
+    bench:dist_seq(fun bench:g124/1, 50000, 8,Nodes).
 
 run_orbit_on_six_nodes() ->
     Nodes = test_nodes(6),

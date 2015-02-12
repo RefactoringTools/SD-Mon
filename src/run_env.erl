@@ -129,12 +129,10 @@ start_host_vms(Host, [VM | HostVMs], UID) ->
     case get_localhost() of
 	Host ->
 	    SSH = "", 
-	    EBIN = "./ebin -pa test/ebin",
 	    CONFIG = ?GROUP_config;
 	_ ->
 	    SSH = "ssh -q -l " ++ UID ++ " " ++ atom_to_list(Host) ++ " ",
-	    EBIN = "'$HOME'/SD-Mon/ebin  -pa '$HOME'/SD-Mon/test/ebin",
-	    CONFIG = "'$HOME'/SD-Mon/"++?GROUP_config
+	    CONFIG = "/tmp/group.config"
     end,
     kill_VM(SSH, VM),
     CMD = SSH ++ "erl -detached -name " ++ atom_to_list(VM)  
@@ -143,7 +141,7 @@ start_host_vms(Host, [VM | HostVMs], UID) ->
 	      ++ " -run s_group"
 	      ++ " -run run_env start_dummy " 
 %             ++ term_to_list(Args)
-	      ++ " -s init stop -pa " ++ EBIN,
+	      ++ " -s init stop",
 %	      ++ " >>" ++ ?LOGFILE,  % da costruire in Results
     os:cmd(CMD),
 %    io:format("CMD is: ~p~n",[CMD]),
@@ -155,19 +153,18 @@ start_cmd(Host, VM) ->
     case get_localhost() of
 	Host ->
 	    SSH = "", 
-	    EBIN = "./ebin -pa test/ebin",
 	    CONFIG = ?GROUP_config;
 	_ ->
 	    SSH = "ssh -q -l " ++ UID ++ " " ++ atom_to_list(Host) ++ " ",
-	    EBIN = "'$HOME'/SD-Mon/ebin  -pa '$HOME'/SD-Mon/test/ebin",
-	    CONFIG = "'$HOME'/SD-Mon/"++?GROUP_config
+	    CONFIG = "/tmp/group.config"
     end, 
     SSH ++ "erl -detached -name " ++ atom_to_list(VM)  
               ++ " -setcookie " ++ atom_to_list(erlang:get_cookie())
 	      ++ " -config " ++ CONFIG 
 	      ++ " -run s_group"
 	      ++ " -run run_env start_dummy " 
-	      ++ " -s init stop -pa " ++ EBIN.
+	      ++ " -s init stop".
+
 %%--------------------------------------------------------------------
 %% @doc
 %% Starts the test node so that it can be pinged
@@ -336,8 +333,7 @@ ck_traces([GroupTuple | T], Acc) ->
 upload_group_config(_, []) ->
     io:format("~n",[]);
 upload_group_config(UID, [Host|T]) ->
-    CMD = "scp "++?GROUP_config++" "++UID++"@"++atom_to_list(Host)++
-	":~/SD-Mon/config",
+    CMD = "scp "++?GROUP_config++" "++UID++"@"++atom_to_list(Host)++":/tmp",
 %    io:format("CMD IS: ~p~n",[CMD]),
     io:format("~nUploading configuration to host ~p",[Host]),
     os:cmd(CMD),
