@@ -3,13 +3,12 @@ SD-MON -- SD Erlang Monitor
 
 Revision history
 ----------------
-`Rev. A   - 04/02/2015 - First release for D5.4 delivery.`
-
-`Rev. B01 - 10/02/2015 - Added Makefile and localhost IP configuration.`
-
-`Rev. B02 - 12/02/2015 - Free installation directory.`
-
-`Rev. B03 - 18/02/2015 - Basic run-time visualization of message counters.`
+```bash
+Rev. A   - 04/02/2015 - First release for D5.4 delivery.
+Rev. B01 - 10/02/2015 - Added Makefile and localhost IP configuration.
+Rev. B02 - 12/02/2015 - Free installation directory.
+Rev. B03 - 18/02/2015 - Basic run-time visualization of message counters.
+```
 
 
 Introduction 
