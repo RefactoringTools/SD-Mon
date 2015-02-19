@@ -98,7 +98,7 @@ sdmon_test:run_orbit_on_five_nodes().
 
 The terminal started by the watch_internode command will show
 internode message counters updating at runtime, each entry in the form
-`{FromNode, ToNode, SentMessages}`.
+`{{FromNode, ToNode}, SentMessages}`.
 
 When Orbit run is completed go back on the first terminal and type:
 
