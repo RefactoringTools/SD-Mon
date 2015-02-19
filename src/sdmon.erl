@@ -357,6 +357,10 @@ loop(State) ->
 	    sdmon_master:s_group_change(State#state.master, Fun, Args),
 	    loop(State);
 
+	{in, From, To} ->
+	    sdmon_db:insert(in, From, To, State#state.master),
+	    loop(State);
+
 	{_From, last_token, [Token]} ->
 	    case get_token(State) of
 		Token -> 
@@ -377,6 +381,7 @@ loop(State) ->
 
 	 {_From, stop, _Arg} ->
 	    terminate(State),
+	    flush_internode(State#state.master),
 	    log("TERMINATED (stop called)~n",[]),
 	    stop;
 	
@@ -386,7 +391,6 @@ loop(State) ->
     end.
 
 
-    
 add_monitor(Node, State) ->
     case get_node_rec(Node, State) of
 	no_node ->
@@ -906,3 +910,12 @@ basedir() ->
     [{_,[{_,EbinDir}]}|_] = module_info(compile),
     lists:sublist(EbinDir, length(EbinDir)-length("/SD-Mon/ebin")).
  
+
+flush_internode(MasterNode) ->
+    receive
+	{in, From, To} ->
+	    sdmon_db:insert(in, From, To, MasterNode),
+	    flush_internode(MasterNode)
+	after 0 ->
+		true
+	end.

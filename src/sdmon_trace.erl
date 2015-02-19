@@ -274,6 +274,9 @@ trace_parser({trace, From, send, Msg, To},{Node,Receiver,FilePort, Groups}) ->
         From/=nonode andalso To/=nonode of 
         true ->
             MsgSize = byte_size(term_to_binary(Msg)),
+
+	    Receiver ! {in, FromNode, ToNode},
+
 	    to_file(FilePort, {trace_inter_node, FromNode,ToNode, MsgSize}),
 	    FromGroups = [GName || {GName, GNodes} <- Groups, 
 				   lists:member(FromNode, GNodes)],

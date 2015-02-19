@@ -12,6 +12,10 @@ Rev. B01 - 10/02/2015
 Rev. B02 - 12/02/2015
 - Free installation directory.
 
+Rev. B03 - 18/02/2015
+- Basic run-time visualization of internode message counters.
+
+
 Introduction 
 ------------
 SD-Mon is a tool aimed to monitor SD-Erlang systems.
@@ -92,17 +96,23 @@ open a new terminal and attach to node1 erlang shell:
 ```bash
 export PATH=<BASEDIR>/SD-Mon/bin/:<BASEDIR>/SD-Mon/test/bin/:$PATH
 cd <BASEDIR>/SD-Mon
+watch_internode
 to_nodes node1
 sdmon_test:run_orbit_on_five_nodes().
 ```
 
-back on the first terminal:
+The terminal started by the watch_internode command will show
+internode message counters updating at runtime, each entry in the form
+```erlang
+{FromNode, ToNode, SentMessages}.
+```
+When Orbit run is completed go back on the first terminal and type:
 
 ```erlang
 application:stop(sdmon).
 ```
 
-find tracing and statistics in `<BASEDIR>/SD-Mon/traces`.
+Find tracing and statistics in `<BASEDIR>/SD-Mon/traces`.
 
 ### Example 2: SD-ORBIT on multi-host
 
@@ -137,15 +147,17 @@ open a new terminal and attach to node1 erlang shell:
 ```bash
 export PATH=<BASEDIR>/SD-Mon/bin/:<BASEDIR>/SD-Mon/test/bin/:$PATH
 cd <BASEDIR>/SD-Mon
+watch_internode2
 to_nodes node1
 sdmon_test:run_orbit_on_nine_nodes().
 ```
 
-back on the first terminal:
+This time message counters will be displayed on 2 terminals.
 
+When Orbit run is completed go back on the first terminal and type:
 
 ```bash
 application:stop(sdmon).
 ```
 
-find tracing and statistics in `<BASEDIR>/SD-Mon/traces`.
+Find tracing and statistics in `<BASEDIR>/SD-Mon/traces`.

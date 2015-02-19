@@ -27,16 +27,28 @@ run_orbit_on_one_node() ->
     bench:dist_seq(fun bench:g124/1, 100000, 8,Nodes).
    
 run_orbit_on_five_nodes() ->
+    os:cmd("gnome-terminal --geometry 80x44+1000+0 "++
+           "-t \"WATCH SDMON Internode messages\" "++  
+           "-x ~/SD-Mon/test/bin/watch_internode"),
+    spawn(local(sdmon_master), fun() -> sdmon_db:start() end),
     Nodes = test_nodes(5),
-    bench:dist_seq(fun bench:g124/1, 50000, 8,Nodes).
+    bench:dist_seq(fun bench:g124/1, 50000, 8,Nodes),
+    spawn(local(sdmon_master), fun() -> sdmon_db:stop() end).
 
 run_orbit_on_six_nodes() ->
     Nodes = test_nodes(6),
     bench:dist_seq(fun bench:g124/1, 100000, 8,Nodes).
     
 run_orbit_on_nine_nodes() ->
+    %% os:cmd("gnome-terminal --geometry 80x44+1000+0 "++
+    %%        "-t \"WATCH SDMON Internode messages\" "++  
+    %%        "-x ~/SD-Mon/test/bin/watch_internode"),
+    %% os:cmd("xterm -sb -j -T \"WATCH SDMON Internode messages\" -fa 'Monospace' -fs 8 "
+    %% 	   ++"-geometry 80x80+1000+0 -e watch_internode&"),
+    spawn(local(sdmon_master), fun() -> sdmon_db:start() end),
     Nodes = test_nodes(9),
-    bench:dist_seq(fun bench:g124/1, 10000, 8,Nodes).  
+    bench:dist_seq(fun bench:g124/1, 10000, 8,Nodes),  
+    spawn(local(sdmon_master), fun() -> sdmon_db:stop() end).
 
 run_orbit_on_eleven_nodes() ->
     Nodes = test_nodes(11),
