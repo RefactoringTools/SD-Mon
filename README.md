@@ -3,17 +3,10 @@ SD-MON -- SD Erlang Monitor
 
 Revision history
 ----------------
-Rev. A - 04/02/2015
-- First release for D5.4 delivery.
-
-Rev. B01 - 10/02/2015
-- Added Makefile and localhost IP configuration.
-
-Rev. B02 - 12/02/2015
-- Free installation directory.
-
-Rev. B03 - 18/02/2015
-- Basic run-time visualization of internode message counters.
+Rev. A   - 04/02/2015 - First release for D5.4 delivery.
+Rev. B01 - 10/02/2015 - Added Makefile and localhost IP configuration.
+Rev. B02 - 12/02/2015 - Free installation directory.
+Rev. B03 - 18/02/2015 - Basic run-time visualization of message counters.
 
 
 Introduction 
@@ -103,8 +96,7 @@ sdmon_test:run_orbit_on_five_nodes().
 
 The terminal started by the watch_internode command will show
 internode message counters updating at runtime, each entry in the form
-```erlang
-{FromNode, ToNode, SentMessages}.
+`{FromNode, ToNode, SentMessages`.
 ```
 When Orbit run is completed go back on the first terminal and type:
 
