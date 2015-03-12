@@ -171,7 +171,7 @@ handle_call({init_conf, SDMON, Dir}, {From, _Tag}, State) ->
 	  Groups = groups(State),
 	  {reply, {ok, {Type,  GName, Trace, Nodes, Token, Groups}}, 
 	         update_agent(get_agent(SDMON, State), 
-			      [{sdmon,From}, {dir,Dir}, {state,up}, {token,Token}], 
+			    [{sdmon,From}, {dir,Dir}, {state,up}, {token,Token}], 
 			      State)}
   end;
 
@@ -580,9 +580,12 @@ handle_s_group_change(SDMON, Fun=new_s_group, Args=[SGroup, Nodes], State) ->
 	    NewState = lists:foldl(DeleteAgentF, State, ExFreeNodesAgents),
 	    NewAgent = start_agent({SGroup, choose_host(Nodes), s_group, Nodes}, 
 				   Traces),
+
 	    FinalState = store_agent(NewAgent, NewState), 
 	    spawn(fun() -> dump_cnf(FinalState) end),
-	    FinalState;
+	    notify_s_group_change({new_s_group, SGroup, Nodes}, FinalState, 
+				 [get_agent_val(NewAgent, vm)]); %excluded from notify
+
 	_Agent ->                            % error: already existing
 	    State                            % todo: add new nodes if needed
 	end;
@@ -605,6 +608,7 @@ handle_s_group_change(_FROM, Fun=delete_s_group, Args=[SGroup], State) ->
 	     unlink(SDMONPid),
 	     stop_sdmon(SDMONNode, Dir, Nodes),
 	     NewState =  remove_agent(Agent#agent.vm, State),  
+
 	     FinalState =
 	     lists:foldl(
 	       fun(Node, LoopState) ->
@@ -614,8 +618,10 @@ handle_s_group_change(_FROM, Fun=delete_s_group, Args=[SGroup], State) ->
 		       _NewState = store_agent(NewAgent, LoopState)
 	       end, NewState, FreeNodes),    
 	     spawn(fun() -> dump_cnf(FinalState) end),
+
 	     spawn(fun() -> restart_trace(NotFreeNodes, FinalState) end),
-	     FinalState
+	     
+	     notify_s_group_change({delete_s_group, SGroup}, FinalState, FreeNodes)   
      end;
 
 handle_s_group_change(_FROM, Fun=add_nodes, Args=[SGROUP, Nodes], State) ->
@@ -650,7 +656,9 @@ handle_s_group_change(_FROM, Fun=add_nodes, Args=[SGROUP, Nodes], State) ->
 				     NewState),
 		    spawn(fun() -> dump_cnf(FinalState) end)
 	    end,
-	    FinalState
+
+	    notify_s_group_change({add_nodes,  SGROUP, Nodes}, FinalState, 
+				  [get_agent_val(Agent, vm)])  % excluded from notify
     end;
 
 
@@ -668,18 +676,20 @@ handle_s_group_change(_SDMON, Fun=remove_nodes, Args=[SGROUP, Nodes], State) ->
 	    NewState = 
 		update_agent(Agent, [{nodes,get_agent_val(Agent,nodes)--Nodes},
 				     {token, NewToken}], State),	    
-	     % if a node is not part of another group, start a new agent 
-  	     NewFreeNodes = Nodes -- handled_nodes(State),   % to be started
-	     FinalState =
-	     lists:foldl(
+	    % if a node is not part of another group, start a new agent 
+	    NewFreeNodes = Nodes -- handled_nodes(State),   % to be started
+	    FinalState =
+	    lists:foldl(
 	       fun(Node, LoopState) ->
 		       Traces = [{node, Node, Trace}],
 		       NewAgent = start_agent({prefix(Node), choose_host([Node]), 
 					       node, [Node]}, Traces),
 		       _NewState = store_agent(NewAgent, LoopState)
 	       end, NewState, NewFreeNodes),
-	     spawn(fun() -> dump_cnf(FinalState) end),
-	     FinalState
+	    spawn(fun() -> dump_cnf(FinalState) end),
+
+	    notify_s_group_change({remove_nodes, SGROUP, Nodes}, FinalState, 
+				  NewFreeNodes++[SDMONNode])   % excluded from notify
      end;
 
 
@@ -692,6 +702,24 @@ restart_trace(Nodes, Agents) ->
     lists:foreach(fun({AgentVM,Ns}) ->
 			  sdmon:restart_trace(AgentVM, Ns)
 		  end, NodeAgents).
+
+
+notify_s_group_change(What, State) ->
+    notify_s_group_change(What, State, []).
+notify_s_group_change(What, State, Excluded) ->
+    lists:foldl(fun(Ag, St) -> 
+			VM = get_agent_val(Ag, vm),
+			case lists:member(VM, Excluded) of
+			    false -> 
+				NewToken = get_agent_val(Ag, token) + 1,
+				{VM,VM} ! {s_group_change_notify, What, NewToken},
+				update_agent(Ag, {token, NewToken}, St);
+			    _ ->
+				St
+			end
+		end, State, State).
+
+
 
 find_nodes_agents(Nodes, Agents) -> 
     find_nodes_agents(Nodes,Agents,[]).
@@ -817,8 +845,7 @@ direct_monitor(MasterPid, VM, N, LogTreshold) ->
 %%%===================================================================
 %%% Internal state handling
 %%%===================================================================
-% record(agent, {vm, dir, sdmon, type, gname, nodes=[], trace=notrace, state=down,
-%		 dmon=no, token}).
+% record(agent, {vm, dir, sdmon, type, gname, nodes, trace, state, dmon, token}).
 
 groups(State) ->
     [{Agent#agent.gname, Agent#agent.nodes} || 

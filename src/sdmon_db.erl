@@ -8,18 +8,6 @@
 %%%-------------------------------------------------------------------
 -module(sdmon_db).
 
-
-%% API
-%-export([start_link/0, add_handler/0]).
-
-%% gen_event callbacks
-%-export([start/0, init/1, handle_event/2, handle_call/2, 
-%	 handle_info/2, terminate/2, code_change/3]).
-
-%-define(SERVER, ?MODULE).
-
-%-record(state, {}).
-
 -compile([debug_info, export_all]).
 
 
@@ -29,9 +17,9 @@
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Starts SD Monitor
+%% Starts db for run-time visualization
 %%
-%% @spec start(Config_File) -> _
+%% @spec start() -> _
 %% @end
 %%--------------------------------------------------------------------
 

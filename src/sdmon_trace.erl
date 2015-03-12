@@ -10,7 +10,7 @@
 
 
 %% API
--export([trace/3, trace/4, check/1, status/3, stop/3, stop_all/0]).
+-export([trace/2, trace/3, check/1, status/3, stop/3, stop_all/0]).
 -import(sdmon, [log/2]).
 
 -define(timeout, 5000).                 % for local calls
@@ -54,10 +54,10 @@ check({s_group, _Args}) -> {error, invalid_trace_arg}.
 %% percept2_profile usa dbg:trace_port x creare la porta che poi usa 
 %% con erlang:trace e poi fa erlang:trace_pattern + erlang:trace 
 %% con opzione {tracer, Port}
-trace(Trace, VMrec, Groups) ->
-    trace(node(), Trace, VMrec, Groups).
+trace(Trace, VMrec) ->
+    trace(node(), Trace, VMrec).
 
-trace(Node, Trace={basic, _StartArgs}, VMrec, _) ->
+trace(Node, Trace={basic, _StartArgs}, VMrec) ->
     case sdmon:get_worker(VMrec) of
 	undefined ->
 	    case net_kernel:connect_node(Node) of     % verifica stato reale
@@ -71,7 +71,7 @@ trace(Node, Trace={basic, _StartArgs}, VMrec, _) ->
 	    {{error, trace_already_started}, []}
     end;
 
-trace(Node, {exec, FUN}, VMrec, _) ->
+trace(Node, {exec, FUN}, VMrec) ->
     case sdmon:get_worker(VMrec) of
 	undefined ->
 	    case net_kernel:connect_node(Node) of     % verifica stato reale
@@ -89,12 +89,12 @@ trace(Node, {exec, FUN}, VMrec, _) ->
     end;
 
 
-trace(Node, {trace, Args}, _VMrec, Groups) ->
+trace(Node, {trace, Args}, _VMrec) ->
     case ckoptions(Args) of
 	[] ->
 	    {{error, bad_trace}, []};
 	Opts ->
-	init_s_group_trace(Node, Groups),
+	init_s_group_trace(Node),
 	case catch dbg:p(all, Opts) of
 	    {ok, R} -> 
 		{ok, started, [R]};
@@ -104,7 +104,7 @@ trace(Node, {trace, Args}, _VMrec, Groups) ->
 	end
     end;
 
-trace(_, _,_,_) ->
+trace(_, _,_) ->
     {{error, bad_trace}, []}.
 
 
@@ -233,7 +233,7 @@ re_init_s_group_trace(_Node) ->
     {ok, _} = dbg:tp({s_group, add_nodes, 2},MatchSpec),
     {ok, _} = dbg:tp({s_group, remove_nodes, 2},MatchSpec).
 
-init_s_group_trace(Node, Groups) ->
+init_s_group_trace(Node) ->
     {_, FilePort} = open_trace_file(Node),
     MatchSpec = [{'_',[],[{return_trace}]}],
     Host = case Node of
@@ -249,7 +249,7 @@ init_s_group_trace(Node, Groups) ->
 	    {ok,Port} = dbg:trace_port_control(Node,get_listen_port),
 	    {ok,_T} = dbg:get_tracer(Node),
 	    Pid = dbg:trace_client(ip, {Host,Port}, 
-			     mk_trace_parser({Node, self(), FilePort, Groups})),
+			     mk_trace_parser({Node, self(), FilePort})),
 	    store_ip_trace_client(Node, Pid);
 	Other ->
 	    Other
@@ -261,12 +261,12 @@ init_s_group_trace(Node, Groups) ->
     {ok, _} = dbg:tp({s_group, remove_nodes, 2},MatchSpec).
 
 %from devo_trace.erl
-mk_trace_parser({Node, Receiver, FilePort, Groups}) -> 
-    {fun trace_parser/2, {Node, Receiver, FilePort, Groups}}.
+mk_trace_parser({Node, Receiver, FilePort}) -> 
+    {fun trace_parser/2, {Node, Receiver, FilePort}}.
 
 % NOTE: executed by dbg process: one (on sdmon node) for each Node (ip port)
 % inter_node (send option)
-trace_parser({trace, From, send, Msg, To},{Node,Receiver,FilePort, Groups}) ->
+trace_parser({trace, From, send, Msg, To},{Node,Receiver,FilePort}) ->
     FromNode = get_node_name(From),
     ToNode = get_node_name(To),
     case FromNode/=node() andalso ToNode/=node() 
@@ -278,10 +278,8 @@ trace_parser({trace, From, send, Msg, To},{Node,Receiver,FilePort, Groups}) ->
 	    Receiver ! {in, FromNode, ToNode},
 
 	    to_file(FilePort, {trace_inter_node, FromNode,ToNode, MsgSize}),
-	    FromGroups = [GName || {GName, GNodes} <- Groups, 
-				   lists:member(FromNode, GNodes)],
-	    ToGroups = [GName || {GName, GNodes} <- Groups, 
-				 lists:member(ToNode, GNodes)],
+	    FromGroups = sdmon:get_node_groups(FromNode),
+	    ToGroups = sdmon:get_node_groups(ToNode),
 	    case FromGroups--ToGroups of
 		FromGroups ->       % Disjoined, no common groups, inter_group msg
 		    to_file(FilePort, {trace_inter_group, FromGroups, ToGroups});
@@ -291,10 +289,9 @@ trace_parser({trace, From, send, Msg, To},{Node,Receiver,FilePort, Groups}) ->
         false ->
 	    goon
     end,
-    {Node, Receiver, FilePort, Groups};
+    {Node, Receiver, FilePort};
 
-trace_parser({trace_ts, From, send, Msg, To, _TS}, 
-	     {Node, Receiver, FilePort, Groups}) ->
+trace_parser({trace_ts, From, send, Msg, To, _TS}, {Node, Receiver, FilePort}) ->
     FromNode = get_node_name(From),
     ToNode = get_node_name(To),
     case FromNode/=node() andalso ToNode/=node() 
@@ -302,11 +299,10 @@ trace_parser({trace_ts, From, send, Msg, To, _TS},
         From/=nonode andalso To/=nonode of 
         true ->
             MsgSize = byte_size(term_to_binary(Msg)),
+	    Receiver ! {in, FromNode, ToNode},
 	    to_file(FilePort, {trace_inter_node, FromNode, ToNode, MsgSize}),
-	    FromGroups = [GName || {GName, GNodes} <- Groups, 
-				   lists:member(FromNode, GNodes)],
-	    ToGroups = [GName || {GName, GNodes} <- Groups, 
-				 lists:member(ToNode, GNodes)],
+	    FromGroups = sdmon:get_node_groups(FromNode),
+	    ToGroups = sdmon:get_node_groups(ToNode),
 	    case FromGroups--ToGroups of
 		FromGroups ->      % Disjoined, no common groups, inter_group msg
 		    to_file(FilePort, {trace_inter_group, FromGroups, ToGroups});
@@ -316,23 +312,22 @@ trace_parser({trace_ts, From, send, Msg, To, _TS},
         false ->
 	    goon
     end,
-    {Node, Receiver, FilePort, Groups};
+    {Node, Receiver, FilePort};
 
 % scheduler (running option)
-trace_parser(Trace={trace, _Pid, in, _Rq, _MFA}, 
-	     {Node, Receiver, FilePort, Groups}) ->
+trace_parser(Trace={trace, _Pid, in, _Rq, _MFA}, {Node, Receiver, FilePort}) ->
     to_file(FilePort, Trace),
-    {Node, Receiver, FilePort, Groups};
+    {Node, Receiver, FilePort};
 
 trace_parser(Trace={trace_ts, _Pid, in, _Rq, _MFA, _TS}, 
-	     {Node, Receiver,FilePort, Groups}) ->
+	     {Node, Receiver, FilePort}) ->
     to_file(FilePort, Trace),
-    {Node, Receiver, FilePort, Groups};
+    {Node, Receiver, FilePort};
 
 
 % s_group (call option + return_from MS)
 trace_parser(Trace={trace_ts, _Pid, return_from, {s_group,Fun,_Arity}, Res, _Ts}, 
-             {Node, Receiver, FilePort, Groups}) ->
+             {Node, Receiver, FilePort}) ->
     Args =  erase(Fun),
     case s_group_results(Fun, Args, Res) of
 	ok ->
@@ -340,10 +335,10 @@ trace_parser(Trace={trace_ts, _Pid, return_from, {s_group,Fun,_Arity}, Res, _Ts}
 	_ -> skip
     end,
     to_file(FilePort, Trace),
-    {Node, Receiver, FilePort, Groups};
+    {Node, Receiver, FilePort};
 
 trace_parser(Trace={trace, _Pid,  return_from, {s_group, Fun, _Arity}, Res}, 
-             {Node, Receiver, FilePort, Groups}) ->
+             {Node, Receiver, FilePort}) ->
     log("TRACE_PARSER RECEIVED TRACE: ~p~n",[Trace]), 
     Args =  erase(Fun),
     case s_group_results(Fun, Args, Res) of
@@ -352,25 +347,25 @@ trace_parser(Trace={trace, _Pid,  return_from, {s_group, Fun, _Arity}, Res},
 	_ -> skip
     end,
     to_file(FilePort, Trace),
-    {Node, Receiver, FilePort, Groups};
+    {Node, Receiver, FilePort};
 
 trace_parser(Trace={trace_ts, _Pid, call, {s_group, Fun, Args}, _Ts}, 
-             {Node, Receiver, FilePort, Groups}) ->
+             {Node, Receiver, FilePort}) ->
     put(Fun, Args),
     to_file(FilePort, Trace),
-    {Node, Receiver, FilePort, Groups};
+    {Node, Receiver, FilePort};
 trace_parser(Trace={trace, _Pid, call, {s_group, Fun, Args}}, 
-             {Node, Receiver, FilePort, Groups}) ->
+             {Node, Receiver, FilePort}) ->
     log("TRACE_PARSER RECEIVED TRACE: ~p~n",[Trace]), 
     put(Fun, Args),
     to_file(FilePort, Trace),
-    {Node, Receiver, FilePort, Groups};
+    {Node, Receiver, FilePort};
 
 % all other traces
-trace_parser(Trace, {Node, Receiver, FilePort, Groups}) ->
+trace_parser(Trace, {Node, Receiver, FilePort}) ->
 %    log("TRACE_PARSER RECEIVED UNKNOWN TRACE: ~p~n",[Trace]), 
     to_file(FilePort, Trace),
-    {Node, Receiver, FilePort, Groups}.
+    {Node, Receiver, FilePort}.
 
 
 
@@ -509,7 +504,7 @@ analyze(Dir) ->
     SYSSTATS = aggregate(AgStats),
     SumData = get_sum_data(SYSSTATS, Groups),
     {ok, Dev} = file:open(Dir++"/GLOBAL_STATISTICS.txt", [write]),
-    io:format(Dev, "{group_partition, ~p}.~n~n",[Groups]),    % OK
+    io:format(Dev, "{group_partition, ~p}.~n~n",[Groups]),    
     io:format(Dev, "~p.~n~n",[SYSSTATS]),
     lists:foreach(fun(El) -> io:format(Dev, "~p.~n~n",[El]) end, SumData),
     file:close(Dev).

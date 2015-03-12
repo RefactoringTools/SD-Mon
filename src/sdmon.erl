@@ -20,7 +20,7 @@
 -export([start_trace/3, stop_trace/2, trace_status/2]).
 
 %% For internal use
--export([direct_monitor/4, basedir/0]).
+-export([direct_monitor/4, basedir/0, get_node_groups/1]).
 
 -define(timeout, 5000).                 % for local calls
 -define(timeoutext, 3000).              % for remote calls
@@ -29,15 +29,7 @@
 
 -record(vmrec, {node, state=down, worker, dmon=no}).
 
--record(state, {master, type, gname, trace=notrace, nodes=[], token, groups}).
-
-% to be done. token = init (from master) or Ref (make_ref())
-% or better integer from 0 (at init) to MaxInt
-% associated to persistent changes (no conn status): nodes/traces
-% updated at each change and sent to master at each s_group change 
-% if master does not match (old +1) ask for whole conf (to be done) otherwise
-% updates it, dumps on files and stores it for Agent.
-% At conn_up master sends token, if not updated  agent sends whole conf
+-record(state, {master, type, gname, trace=notrace, nodes=[], token}).
 
 -compile([debug_info, export_all]).
 
@@ -61,7 +53,8 @@ start([MasterNodeStr]) ->
     log("SDMON Master Node =~p~n",[MasterNode]),
     {Type, GName, Trace, Nodes, Token, Groups} = get_config_from_master(MasterNode),
     log("Received configuration: ~p~n",[{Type, GName, Trace, Nodes, Token, Groups}]),
-    loop(build_state({MasterNode, Type, GName, Trace, Nodes, Token, Groups})).
+    create_groups_tab(Groups),
+    loop(build_state({MasterNode, Type, GName, Trace, Nodes, Token})).
 
 
 
@@ -86,7 +79,8 @@ sync(State) ->
     {Type, GName, Trace, Nodes, Token, Groups} = get_config_from_master(MasterNode),
     sdmon_trace:stop_all(),
     log("Received configuration: ~p~n",[{Type, GName, Trace, Nodes, Token, Groups}]),
-    NewState = build_state({MasterNode, Type, GName, Trace, Nodes, Token, Groups}),
+    sync_groups_tab(Groups),
+    NewState = build_state({MasterNode, Type, GName, Trace, Nodes, Token}),
     log("Sync with Master: END~n",[]),
     NewState.
     
@@ -281,9 +275,6 @@ stop(SDMON) ->
 %%% Internal Functions
 %%%===================================================================
 
-s_group_change(SDMON, Fun, Args) ->
-  SDMON ! {s_group_change, Fun, Args}.
-
 loop(State) ->
     receive
         {From, get_state, []} ->
@@ -318,6 +309,7 @@ loop(State) ->
 	    case add_trace(Nodes, Token, State) of
 		{ok, NewState} -> 
 		    From !  ok,
+		    update_nodegroups({add_nodes, get_group_name(State), Nodes}),
 		    loop(NewState);
 		Error ->
 		    From ! Error,
@@ -328,6 +320,7 @@ loop(State) ->
 	    case untrace_remove(Nodes, Token, State) of
 		{ok, NewState} -> 
 		    From !  ok,
+		    update_nodegroups({remove_nodes, get_group_name(State), Nodes}),
 		    loop(NewState);
 		Error ->
 		    From ! Error,
@@ -353,9 +346,13 @@ loop(State) ->
 		    loop(NewState)
 		end;
 
-	{s_group_change, Fun, Args} ->
+	{s_group_change, Fun, Args} ->             % from sdmon_trace
 	    sdmon_master:s_group_change(State#state.master, Fun, Args),
 	    loop(State);
+
+	{s_group_change_notify, What, Token} ->    % from Master
+	    update_nodegroups(What),
+	    loop(update_token(Token, State));
 
 	{in, From, To} ->
 	    sdmon_db:insert(in, From, To, State#state.master),
@@ -490,10 +487,19 @@ trace(Node, start, Trace, State) ->
 	VMrec ->
 	    case net_kernel:connect_node(Node) of     % verifica stato reale
 		true ->
-		    case sdmon_trace:trace(Node, Trace, VMrec, get_groups(State)) of
-			{ok, Result, StateChanges} ->
-			    {ok, Result, update_status(Node, StateChanges,State)};
+		    case sdmon_trace:trace(Node, Trace, VMrec) of
+
+			{ok, Result, [{worker,PID}]} ->
+			    log("Node ~p traced. Worker:~p~n",[Node,PID]),
+			    {ok, Result, update_status(Node, 
+						       [{state,up},{worker,PID}], 
+						       State)};
+			{ok, Result, [R]} ->
+			    log("Node ~p traced. Result: ~p~n",[Node,R]),
+			    {ok, Result, update_status(Node, [{state,up}], State)};
+
 			{Error, StateChanges} ->
+			    log("Node ~p NOT traced: ~p~n",[Node, Error]),
 			    {Error, update_status(Node, StateChanges, State)}
 		    end;
 		_down ->
@@ -539,22 +545,22 @@ terminate(_VMs) ->
 %%% Internal state handling
 %%%===================================================================
 
-build_state({MasterNode, Type, GName, Trace, Nodes, Token, Groups})  ->
-    #state{master=MasterNode, type=Type, gname=GName, trace=Trace, groups=Groups,
-	   nodes=build_nodes(Trace, Nodes, Groups, []), token=Token};
+build_state({MasterNode, Type, GName, Trace, Nodes, Token})  ->
+    #state{master=MasterNode, type=Type, gname=GName, trace=Trace, 
+	   nodes=build_nodes(Trace, Nodes, []), token=Token};
 build_state(MasterNode) ->
     #state{master=MasterNode}.
 
-build_nodes( _, [], _,  Recs) ->
+build_nodes( _, [],  Recs) ->
     Recs;
-build_nodes(Trace, [Node | Nodes], Groups, Recs) ->
+build_nodes(Trace, [Node | Nodes], Recs) ->
     log("BUILDING NODE: ~p~n",[Node]),
     case lists:keyfind(Node, #vmrec.node, Recs) of
 	false ->
 	    erlang:monitor_node(Node, true),
 	    VMrec = case net_kernel:connect_node(Node) of 
 			true -> 
-			    case sdmon_trace:trace(Node, Trace, #vmrec{}, Groups) of
+			    case sdmon_trace:trace(Node, Trace, #vmrec{}) of
 			      {ok, _, [{worker,PID}]} ->
 				    log("Node ~p traced. Worker:~p~n",[Node,PID]),
 			    	    #vmrec{node=Node, state=up, worker=PID};
@@ -569,9 +575,9 @@ build_nodes(Trace, [Node | Nodes], Groups, Recs) ->
 			    log("Node ~p NOT traced: node down~n",[Node]),
 			    #vmrec{node=Node}
 		    end,
-	    build_nodes(Trace, Nodes, Groups, Recs++[VMrec]);
+	    build_nodes(Trace, Nodes, Recs++[VMrec]);
 	_  ->                              % Double entry: discard it
-	    build_nodes(Trace, Nodes, Groups, Recs)
+	    build_nodes(Trace, Nodes, Recs)
     end.
 
 
@@ -585,6 +591,7 @@ get_node_rec(Node, State) ->
 	VMrec ->
 	    VMrec
     end.
+
 add_node(Node, ConnState, State) ->
     case lists:keyfind(Node, #vmrec.node, State#state.nodes) of
 	false ->
@@ -630,8 +637,6 @@ get_group_type(State) ->
     State#state.type.
 get_group_name(State) ->
     State#state.gname.
-get_groups(State) ->
-    State#state.groups.
 
 update_trace(Trace, State) ->
     State#state{trace=Trace}.
@@ -665,8 +670,6 @@ update_rec(VMrec, [{state, Value} | StatusTuples]) ->
     update_rec(VMrec#vmrec{state = Value}, StatusTuples);
 update_rec(VMrec, [{worker, Value} | StatusTuples]) ->
     update_rec(VMrec#vmrec{worker = Value}, StatusTuples);
-%% update_rec(VMrec, [{trace, Value} | StatusTuples]) ->
-%%      update_rec(VMrec#vmrec{trace = Value}, StatusTuples);
 update_rec(VMrec, [{dmon, Value} | StatusTuples]) ->
     update_rec(VMrec#vmrec{dmon = Value}, StatusTuples).    
     
@@ -738,7 +741,7 @@ handle_worker_dead(Pid, Reason, State) ->    % best effort, fails if node down
 		_ ->
 		    log("NODE ~p: Crashed worker ~p with Reason: ~p~n",
 		        [Node, Pid, Reason]),
-		    case sdmon_trace:trace(Node, {TraceType,Args}, Oldrec, na) of
+		    case sdmon_trace:trace(Node, {TraceType,Args}, Oldrec) of
 			{ok, _Result, StateChanges} ->
 			    update_status(Node, StateChanges, State);
 			{ERROR, _StateChanges}->
@@ -907,7 +910,7 @@ list_to_term(String) ->
 
 %% Return the SD-Mon base directory, ex: "/home/mau"
 basedir() ->
-    [{_,[{_,EbinDir}]}|_] = module_info(compile),
+    [{_,[{_,EbinDir}|_]}|_] = module_info(compile),
     lists:sublist(EbinDir, length(EbinDir)-length("/SD-Mon/ebin")).
  
 
@@ -919,3 +922,65 @@ flush_internode(MasterNode) ->
 	after 0 ->
 		true
 	end.
+
+%%%===================================================================
+%%% nodegroups tab handling. 
+%%% Used by tracers to get the groups of a node.
+%%% Created when the agent is started and configured, 
+%%% Updated at s_group_change notification by Master
+%%%===================================================================
+create_groups_tab(Groups)->
+    ets:new(nodegroups, [ordered_set,named_table,public]),
+    lists:foreach(fun({Group, Nodes}) -> insert_nodes(Group, Nodes) end, Groups).
+
+sync_groups_tab(Groups) ->
+    ets:delete_all_objects(nodegroups),
+    lists:foreach(fun({Group, Nodes}) -> insert_nodes(Group, Nodes) end, Groups).
+
+insert_nodes(Group, Nodes) ->
+    lists:foreach(fun(Node) ->
+			  case ets:lookup(nodegroups, Node) of
+			      [] ->
+				  ets:insert(nodegroups, {Node, [Group]});
+			      [{Node, Groups}] ->
+				  case lists:member(Group, Groups) of
+				      false ->
+					  ets:insert(nodegroups, 
+						     {Node, Groups++[Group]});
+				      _ -> goon   % double add_nodes ?
+				  end
+			  end
+		  end, Nodes).
+
+get_node_groups(Node) ->
+    case ets:lookup(nodegroups, Node) of
+	[] -> [];
+	[{Node, Groups}] -> Groups
+    end.
+
+update_nodegroups({new_s_group, SGroup, Nodes}) ->
+    insert_nodes(SGroup, Nodes);
+update_nodegroups({delete_s_group, SGroup}) ->
+    ets:foldl(fun({Node, Groups}, DontCare) ->
+		      delete_group({Node, Groups}, SGroup),
+		      DontCare
+	      end, notused, nodegroups);
+update_nodegroups({add_nodes, SGroup, Nodes}) ->
+    insert_nodes(SGroup, Nodes); 
+update_nodegroups({remove_nodes, SGroup, Nodes}) ->
+    lists:foreach(fun(Node) ->  
+			  delete_group({Node, get_node_groups(Node)}, SGroup)  
+		  end, Nodes).
+
+
+delete_group({_Node, []}, _Group) ->          % should not happen
+    goon;                                   
+delete_group({Node, [Group]}, Group) ->       % Node becomes free
+    ets:delete(nodegroups, Node);
+delete_group({Node, Groups}, Group) ->        % general case: remove Group
+    case lists:member(Group, Groups) of
+	true ->
+	    ets:insert(nodegroups, {Node, Groups--[Group]});
+	_ ->
+	    goon
+    end.
