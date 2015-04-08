@@ -13,7 +13,7 @@
                nodes =[]         :: [node()],
                data  = []        :: any()
               }).                        
-%%The docs for the websocket behaviour can be found here: 
+%% The docs for the websocket behaviour can be found here: 
 %% http://ninenines.eu/docs/en/cowboy/1.0/manual/cowboy_websocket_handler/
 
 init({tcp, http}, _Req, _Opts) ->
@@ -36,8 +36,6 @@ websocket_handle({text, Msg}, Req, State) ->
     MsgStr=binary_to_list(Msg),
     FinalMsg = lists:concat(["Erlang received the message: ", MsgStr]),
     io:format("Replying with: ~p~n",[FinalMsg]),
-%    {ok, Req, State};
-%    {reply, {text, list_to_binary(FinalMsg)}, Req, State};
     {reply, {text, Msg}, Req, State};
 websocket_handle(Data, Req, State) ->
     io:format("Msg recieved: ~p~n",[Data]),
@@ -47,7 +45,6 @@ websocket_handle(Data, Req, State) ->
 %%Currently this just sends those along to the client
 websocket_info(Info,Req,State) -> 
     io:format("Got erlang message"),
-%    MsgStr = lists:concat(["Erlang message: ", io_lib:format("~p",[Info])]),
     MsgStr =  io_lib:format("~p",[Info]),
     {reply, {text, list_to_binary(MsgStr)}, Req, State}.
     
