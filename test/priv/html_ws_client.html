@@ -1,0 +1,139 @@
+<html>
+  <head>
+    <meta charset="UTF8">  
+    <title>SD-Mon Online Visualisation</title>
+    
+    <style>
+    	p.textline {
+      	font-family: "Courier New", Courier, monospace;
+    		font-size: 1em;
+			}
+	</style>
+
+    <!-- <script src="/static/jquery.min.js"></script> -->
+    <!-- <script src="static/lib/d3.js"></script>-->
+    <script src="http://d3js.org/d3.v3.js" charset="utf-8"></script>
+    <script type="text/javascript" src="static/lib/underscore-min.js"></script>
+    <script type="text/javascript" src="static/lib/jquery-1.8.3.js"></script>
+    <script type="text/javascript" src="static/lib/jquery-ui.js"></script>
+    <script type="text/javascript" src="static/lib/detect-zoom-master/detect-zoom.js"></script>
+    <link rel="stylesheet" type="text/css" href="static/shared.css">
+    <!--<script type="text/javascript" src="slider.js"></script> -->
+
+    <script type="text/javascript">
+      
+      var websocket;
+      var profile_on=0;
+      $(document).ready(init);
+      
+      function init() {
+          if(!("WebSocket" in window)){  
+              $('#status').append('<p><span style="color: red;">websockets are not supported </span></p>');
+              $("#navigation").hide();  
+          } else {
+              $('#status').append('<p><span style="color: green;">websockets are supported </span></p>');
+             connect();
+      };
+              $("#connected").hide(); 	
+              $("#content").hide(); 	
+      };
+
+      function connect()
+      {
+          wsHost = 'ws://localhost:8080/websocket';
+          websocket = new WebSocket(wsHost);
+          
+          websocket.onopen = function(evt) { onOpen(evt) }; 
+          websocket.onclose = function(evt) { onClose(evt) }; 
+          websocket.onmessage = function(evt) { onMessage(evt) }; 
+          websocket.onerror = function(evt) { onError(evt) };
+      showScreen('<span style="color: orange;">Ready ...</span>'); 
+      };  
+      
+      function disconnect() {
+          websocket.send("stop")
+          websocket.close();
+      }; 
+
+
+      function onOpen(evt) { 
+          $("#connected").fadeIn('slow');
+          $("#content").fadeIn('slow');
+      };  
+
+      function onClose(evt) { 
+          showScreen('<span style="color: red;">Websocket closed... </span>');
+      };  
+
+      function onMessage(evt) { 
+			if (evt.data == "clear") {
+		   	clearMessages();
+		   	var legenda = " Sender Node                   Receiving Node                  Sent Messages";
+		   	var sep =     "----------------------------------------------------------------------------";
+		   	$('#messages').append('<pre style="font-size: 14px">' + legenda + '</pre>');
+		   	$('#messages').append('<pre style="font-size: 14px">' + sep + '</pre>');
+		   } else {
+		   
+	    	var str1 = evt.data.split("{{");
+    		var str2 = str1[1].split(",");
+    		var from = str2[0];
+    		var to = str2[1].split("}")[0];
+    		var msg = str2[2].split("}")[0];
+    		var p1 = 30 - from.length;
+    		var p2 = 30 - to.length;
+    		var p3 = 15 - msg.length;
+    		var pad1 = "                              ".slice(0,p1);
+    		var pad2 = "                              ".slice(0,p2);
+    		var pad3 = "               ".slice(0,p3);
+			var textline = from + pad1 + to + pad2 + pad3 + msg;
+			$('#messages').append('<pre style="font-size: 14px">' + textline + '</pre>');		   
+
+         }
+      };  
+
+      function showScreen(txt) { 
+          $('#connection_status').html('<p>' + txt + '</p>');
+      };
+
+      function clearScreen() 
+      { 
+          $('#output').html("");
+      };
+      
+      function sendMessage(){
+          var msgText = $('#messageText').val();
+          websocket.send(msgText);
+      };
+      
+      function clearMessages(){
+         $('#messages').empty();
+      }
+    </script>
+  </head>
+
+  <body>
+    <div id="header">
+      <h1 align=middle  style="color: blue;">SD-Mon Online Visualization</h1>
+      <div id="status"></div>
+    </div>
+
+    
+    
+    </div>
+    <div id="content">						
+      <div id="output"></div>
+      <div id="connection_status"></div>
+    </div>
+    <div id="input">
+      <h3>Inter-Group messages:</h3>
+    </div>
+    <div class="scroll" >
+      <ul id="messages">
+	
+      </ul>
+    </div>
+    <form name="clear">
+      <input type="button" onclick="clearMessages()" value="Clear Messages" />
+    </form>
+  </body>
+</html> 

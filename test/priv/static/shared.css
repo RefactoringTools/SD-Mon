@@ -1,0 +1,14 @@
+#highLevel {
+	display: none;
+}
+
+#lowLevel {
+	display: none;
+}
+
+div.scroll{
+<!--     width: 1000px; -->
+    width: auto;
+    height: 620px;
+    overflow: scroll;
+}
