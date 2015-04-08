@@ -7,8 +7,8 @@
 
 # @RELEASE project (http://www.release-project.eu/)
 
-# USAGE: to_master
-# attach to the SD-Mon Master node
+# USAGE: sdmon_stop
+# stops the SD-Mon application
 
 if [ -f .localhost ]; 
 	then	LOCALHOST=`cat .localhost |awk -F \' '{print $2}'`

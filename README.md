@@ -9,6 +9,7 @@ Rev. B01 - 10/02/2015 - Added Makefile and localhost IP configuration.
 Rev. B02 - 12/02/2015 - Free installation directory.
 Rev. B03 - 18/02/2015 - Basic run-time visualization of message counters.
 Rev. B04 - 12/03/2015 - Dynamic handling improvement.
+Rev. B   - 07/04/2015 - WEB online visualization for inter-group messages.
 ```
 
 
@@ -33,6 +34,9 @@ persistently stored so that the last configuration can be reproduced
 after a restart. Of course the shadow network can be always updated
 via the User Interface.
 
+The number of exchanged inter-node messages can be displayed at run-time,
+a WEB interface is available to follow inter-group messages.
+
 As soon as an agent is stopped the related tracing files are fetched 
 across the network by the master and they are made available in a
 readable format in the master file system and statistics are generated.
@@ -44,10 +48,14 @@ A detailed description can be found in document
 
 Installation
 ------------
+To compile the code you need rebar in your PATH.
+
+Type the following commands:
 ```bash
 git clone https://github.com/RefactoringTools/SD-Mon
 cd SD-Mon
 make
+make web
 ```
 
 How to run SD-Mon
@@ -87,24 +95,33 @@ run_env
 sdmon_start -v
 ```
 
-open a new terminal and attach to node1 erlang shell:
+Open a new terminal and type:
 
 ```bash
 export PATH=<BASEDIR>/SD-Mon/bin/:<BASEDIR>/SD-Mon/test/bin/:$PATH
 cd <BASEDIR>/SD-Mon
 watch_internode
-to_nodes node1
-sdmon_test:run_orbit_on_five_nodes().
+sdmon_web_start
 ```
-
 The terminal started by the watch_internode command will show
 internode message counters updating at runtime, each entry in the form
 `{{FromNode, ToNode}, SentMessages}`.
+
+To observe inter-group messages as they are sent, open a web browser
+and navigate to 'localhost:8080'.
+
+
+Now attach to node1 erlang shell and start the Orbit test from there:
+```bash
+to_nodes node1
+sdmon_test:run_orbit_on_five_nodes().
+```
 
 When Orbit run is completed go back on the first terminal and type:
 
 ```erlang
 application:stop(sdmon).
+sdmon_web_stop
 ```
 
 Find tracing and statistics in `<BASEDIR>/SD-Mon/traces`.
@@ -137,22 +154,31 @@ run_env
 sdmon_start -v
 ```
 
-open a new terminal and attach to node1 erlang shell:
+Open a new terminal and type:
 
 ```bash
 export PATH=<BASEDIR>/SD-Mon/bin/:<BASEDIR>/SD-Mon/test/bin/:$PATH
 cd <BASEDIR>/SD-Mon
 watch_internode2
+sdmon_web_start
+```
+This time message counters will be displayed on 2 terminals.
+
+To observe inter-group messages as they are sent, open a web browser
+and navigate to 'localhost:8080'.
+
+
+Now attach to node1 erlang shell and start the Orbit test from there:
+```bash
 to_nodes node1
 sdmon_test:run_orbit_on_nine_nodes().
 ```
-
-This time message counters will be displayed on 2 terminals.
 
 When Orbit run is completed go back on the first terminal and type:
 
 ```bash
 application:stop(sdmon).
+sdmon_web_stop
 ```
 
 Find tracing and statistics in `<BASEDIR>/SD-Mon/traces`.

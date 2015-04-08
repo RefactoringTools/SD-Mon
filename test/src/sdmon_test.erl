@@ -30,7 +30,7 @@ run_orbit_on_five_nodes() ->
     %% os:cmd("gnome-terminal --geometry 80x44+1000+0 "++
     %%        "-t \"WATCH SDMON Internode messages\" "++  
     %%        "-x ~/SD-Mon/test/bin/watch_internode"),
-    spawn(local(sdmon_master), fun() -> sdmon_db:start() end),
+    spawn(local(sdmon_master), fun() -> sdmon_db:start(100) end),
     Nodes = test_nodes(5),
     bench:dist_seq(fun bench:g124/1, 50000, 8,Nodes),
     spawn(local(sdmon_master), fun() -> sdmon_db:stop() end).

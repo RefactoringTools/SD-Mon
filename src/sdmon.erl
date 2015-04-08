@@ -358,6 +358,10 @@ loop(State) ->
 	    sdmon_db:insert(in, From, To, State#state.master),
 	    loop(State);
 
+	{ig, From, To} ->
+	    sdmon_db:insert(ig, From, To, State#state.master),
+	    loop(State);
+
 	{_From, last_token, [Token]} ->
 	    case get_token(State) of
 		Token -> 

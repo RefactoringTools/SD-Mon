@@ -16,3 +16,17 @@ inst:
 	then echo "code:add_pathsa([\""$(PWD)/ebin\",\"$(PWD)/test/ebin\"]\). >> ~/.erlang; \
 	fi
 
+
+
+
+web: deps
+	@rebar compile
+	@erlc -o test/ebin test/src/*.erl
+	@ln -sf test/priv
+
+deps:
+	@rebar get-deps
+
+webclean:
+	@rebar clean
+

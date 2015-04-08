@@ -282,6 +282,7 @@ trace_parser({trace, From, send, Msg, To},{Node,Receiver,FilePort}) ->
 	    ToGroups = sdmon:get_node_groups(ToNode),
 	    case FromGroups--ToGroups of
 		FromGroups ->       % Disjoined, no common groups, inter_group msg
+		    Receiver ! {ig, FromNode, ToNode},
 		    to_file(FilePort, {trace_inter_group, FromGroups, ToGroups});
 		_ ->                % at least 1 common group, intra_group msg
 		    goon
@@ -305,6 +306,7 @@ trace_parser({trace_ts, From, send, Msg, To, _TS}, {Node, Receiver, FilePort}) -
 	    ToGroups = sdmon:get_node_groups(ToNode),
 	    case FromGroups--ToGroups of
 		FromGroups ->      % Disjoined, no common groups, inter_group msg
+		    Receiver ! {ig, FromNode, ToNode},
 		    to_file(FilePort, {trace_inter_group, FromGroups, ToGroups});
 		_ ->                  % at least 1 common group, intra_group msg
 		    goon
